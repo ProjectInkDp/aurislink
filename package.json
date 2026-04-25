@@ -1,0 +1,27 @@
+{
+  "name": "aurislink",
+  "version": "1.0.0",
+  "description": "A high-performance, protocol-compatible Lavalink v4 audio server written in Node.js.",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "node --dns-result-order=ipv4first --import tsx src/index.ts",
+    "start:dist": "node --dns-result-order=ipv4first dist/src/index.js",
+    "build": "tsc --incremental false",
+    "dev": "node --watch --dns-result-order=ipv4first --import tsx src/index.ts"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "yaml": "^2.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}

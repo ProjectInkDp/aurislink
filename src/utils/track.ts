@@ -108,12 +108,12 @@ class Reader {
 }
 
 export function decodeTrack(encoded: string): TrackInfo {
-  const full    = Buffer.from(encoded, 'base64')
-  const flags   = full.readUInt32BE(0)
-  const length  = flags & 0x3fffffff
+  const full = Buffer.from(encoded, 'base64')
+  const flags = full.readUInt32BE(0)
+  const length = flags & 0x3fffffff
   const payload = full.subarray(4, 4 + length)
 
-  const r       = new Reader(payload)
+  const r = new Reader(payload)
   const version = r.readByte()
 
   if (version !== VERSION) {

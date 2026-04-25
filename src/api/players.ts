@@ -110,7 +110,7 @@ export async function handleUpdatePlayer(
 
   // ── Voice state ──
   if (body.voice) {
-    player.voice     = body.voice
+    player.voice = body.voice
     player.state.connected = !!(body.voice.token && body.voice.endpoint)
     log('info', 'Players', `Voice state updated for guild=${guildId}`)
   }
@@ -151,17 +151,17 @@ export async function handleUpdatePlayer(
       if (player.track) {
         wsm.emitTrackEnd(player, 'stopped')
       }
-      player.track     = null
+      player.track = null
       player._startedAt = 0
-      player._pausedAt  = 0
+      player._pausedAt = 0
     } else if (body.track.encoded) {
       // Load from encoded string
       try {
-        const info   = decodeTrack(body.track.encoded)
+        const info = decodeTrack(body.track.encoded)
         player.track = { encoded: body.track.encoded, info, pluginInfo: {} }
         player._startedAt = Date.now()
-        player._pausedAt  = 0
-        player.paused     = false
+        player._pausedAt = 0
+        player.paused = false
         wsm.emitTrackStart(player)
         log('info', 'Players', `Track started: "${info.title}" guild=${guildId}`)
       } catch (err) {
@@ -177,10 +177,10 @@ export async function handleUpdatePlayer(
             const result = await source.load(body.track.identifier)
             if (result.loadType === 'track') {
               const track = result.data as import('../typings/index.js').Track
-              player.track      = track
+              player.track = track
               player._startedAt = Date.now()
-              player._pausedAt  = 0
-              player.paused     = false
+              player._pausedAt = 0
+              player.paused = false
               wsm.emitTrackStart(player)
               log('info', 'Players', `Track started via identifier: "${track.info.title}" guild=${guildId}`)
               found = true
@@ -202,7 +202,7 @@ export async function handleUpdatePlayer(
   if (body.position !== undefined && player.track) {
     const seekTo = Math.max(0, Math.min(body.position, player.track.info.length))
     player._startedAt = Date.now() - seekTo
-    player._pausedAt  = 0
+    player._pausedAt = 0
     log('info', 'Players', `Seek to ${seekTo}ms guild=${guildId}`)
   }
 

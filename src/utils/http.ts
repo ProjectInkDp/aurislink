@@ -24,11 +24,11 @@ export interface HttpOptions {
 }
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
-const DEFAULT_TIMEOUT       = 15_000
+const DEFAULT_TIMEOUT = 15_000
 const DEFAULT_MAX_REDIRECTS = 5
 
 const keepAliveHttps = new https.Agent({ keepAlive: true })
-const keepAliveHttp  = new http.Agent({ keepAlive: true })
+const keepAliveHttp = new http.Agent({ keepAlive: true })
 
 function decompress(res: http.IncomingMessage): NodeJS.ReadableStream {
   const enc = (res.headers['content-encoding'] ?? '').toLowerCase()
@@ -50,12 +50,12 @@ function collectBody(stream: NodeJS.ReadableStream): Promise<string> {
 export function httpGet(url: string, opts: HttpOptions = {}, _redirects = 0): Promise<HttpResponse | null> {
   return new Promise(resolve => {
     const {
-      method          = 'GET',
-      headers         = {},
+      method = 'GET',
+      headers = {},
       body,
-      timeout         = DEFAULT_TIMEOUT,
+      timeout = DEFAULT_TIMEOUT,
       followRedirects = true,
-      maxRedirects    = DEFAULT_MAX_REDIRECTS,
+      maxRedirects = DEFAULT_MAX_REDIRECTS,
     } = opts
 
     let parsed: URL
@@ -66,8 +66,8 @@ export function httpGet(url: string, opts: HttpOptions = {}, _redirects = 0): Pr
     }
 
     const isHttps = parsed.protocol === 'https:'
-    const lib     = isHttps ? https : http
-    const agent   = isHttps ? keepAliveHttps : keepAliveHttp
+    const lib = isHttps ? https : http
+    const agent = isHttps ? keepAliveHttps : keepAliveHttp
 
     const req = lib.request({
       method,
@@ -115,7 +115,7 @@ export function httpStream(url: string, opts: HttpOptions = {}): Promise<http.In
     try { parsed = new URL(url) } catch { resolve(null); return }
 
     const isHttps = parsed.protocol === 'https:'
-    const lib     = isHttps ? https : http
+    const lib = isHttps ? https : http
 
     const req = lib.request({
       method: 'GET', hostname: parsed.hostname,

@@ -10,10 +10,10 @@ const PREFIX_RE = /^([a-z]+)search:(.+)$/i
 
 export async function handleLoadTracks(
   _req: http.IncomingMessage,
-  res:  http.ServerResponse,
-  url:  URL,
+  res: http.ServerResponse,
+  url: URL,
   sources: Map<string, Source>,
-  config:  AurisConfig,
+  _config: AurisConfig,
 ) {
   const identifier = url.searchParams.get('identifier')?.trim()
 
@@ -24,11 +24,15 @@ export async function handleLoadTracks(
   log('info', 'LoadTracks', `identifier: ${identifier}`)
 
   try {
-    // ── Search prefix (e.g. scsearch:lofi) ───────────────────────────────────
+    // Search prefix (e.g. scsearch:lofi)
     const prefixMatch = identifier.match(PREFIX_RE)
     if (prefixMatch) {
       const prefix = prefixMatch[1]!.toLowerCase() + 'search'
-      const query  = prefixMatch[2]!.trim()
+      const query = prefixMatch[2]!.trim()
+
+      if (!query) {
+        return sendError(res, 400, 'Bad Request', 'Search query cannot be empty')
+      }
 
       for (const source of sources.values()) {
         if (source.searchPrefixes.includes(prefix)) {
@@ -41,7 +45,7 @@ export async function handleLoadTracks(
       return sendJson(res, 200, { loadType: 'empty', data: {} })
     }
 
-    // ── Direct URL ────────────────────────────────────────────────────────────
+    // Direct URL
     for (const source of sources.values()) {
       if (source.accepts(identifier)) {
         const result = await source.load(identifier)

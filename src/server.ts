@@ -11,7 +11,7 @@ import { SessionManager } from './core/SessionManager.js'
 import { WebSocketManager } from './core/WebSocketManager.js'
 
 export async function createServer(config: AurisConfig, sources: Map<string, Source>) {
-  const sm  = new SessionManager()
+  const sm = new SessionManager()
   const wsm = new WebSocketManager(config, sm)
 
   const router = createRouter(config, sources, sm, wsm)

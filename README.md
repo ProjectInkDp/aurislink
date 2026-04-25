@@ -1,6 +1,6 @@
 # AurisLink
 
-> A high-performance, Lavalink v4-compatible audio server written in TypeScript / Node.js — designed to be a better alternative to both Lavalink and NodeLink.
+> A high-performance, Lavalink v4-compatible audio server written in TypeScript / Node.js.
 
 AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.dev/api/rest), so any existing Lavalink client (Shoukaku, Lavalink.js, Magmastream, etc.) connects without changes.
 
@@ -11,12 +11,13 @@ AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.de
 | Feature | Lavalink | NodeLink | AurisLink |
 |---|---|---|---|
 | Runtime | Java / JVM | Node.js | Node.js |
-| Memory (idle) | ~200MB+ | ~50MB | ~30MB |
-| Android / Termux | ❌ Heavy | ✅ | ✅ |
+| Memory (idle) | ~200 MB+ | ~50 MB | ~30 MB |
+| Mobile / low-end environments | ❌ Heavy | ✅ | ✅ |
 | Auto client_id refresh | ❌ | ❌ | ✅ |
 | Stream URL cache w/ TTL | ❌ | ❌ | ✅ |
 | Native TLS | ❌ | ❌ | ✅ |
-| Source fallback chain | ❌ | Partial | ✅ Planned |
+| File logging w/ daily rotation | ❌ | ❌ | ✅ |
+| encodeTrack / decodeTracks REST | ❌ | ✅ | ✅ |
 | Lavalink v4 compatible | ✅ | ✅ | ✅ |
 
 ---
@@ -26,30 +27,56 @@ AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.de
 - **Node.js 20+**
 - **npm 9+**
 
-> Tested on Termux (Android), Ubuntu, and macOS.
-
 ---
 
-## Quick start (Termux)
+## Running AurisLink
+
+AurisLink runs anywhere Node.js runs. Pick the environment that fits you.
+
+### Any terminal (Linux / macOS / Windows WSL)
 
 ```sh
-# 1 – Extract the zip
-cd ~
-unzip /sdcard/Download/aurislink-main.zip
+unzip aurislink-main.zip
 cd aurislink
-
-# 2 – Install dependencies
 npm install
-
-# 3 – (Optional) Copy and edit the config
-cp config.default.ts config.ts
-# nano config.ts
-
-# 4 – Run
 npm start
 ```
 
-### Test with curl (in another Termux session)
+### Mobile terminals (Termux, UserLAnd, iSH, etc.)
+
+```sh
+# Termux example — same steps work on any Android terminal
+cd ~
+unzip /sdcard/Download/aurislink-main.zip
+cd aurislink
+npm install
+npm start
+```
+
+### Cloud / remote shells (GitHub Codespaces, Gitpod, Replit, SSH, etc.)
+
+```sh
+unzip aurislink-main.zip
+cd aurislink
+npm install
+npm start
+```
+
+### Docker
+
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY . .
+RUN npm install
+CMD ["npm", "start"]
+```
+
+---
+
+## Quick test with curl
+
+Open a second terminal tab / session and run:
 
 ```sh
 # Server info
@@ -65,6 +92,16 @@ curl -H "Authorization: youshallnotpass" \
 # Load a direct SoundCloud URL
 curl -H "Authorization: youshallnotpass" \
   "http://localhost:2333/v4/loadtracks?identifier=https://soundcloud.com/artist/track"
+
+# Decode a track
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/decodetrack?encodedTrack=<base64>"
+
+# Encode a TrackInfo
+curl -X POST -H "Authorization: youshallnotpass" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Test","author":"Me","length":180000,"identifier":"123","isStream":false,"position":0,"uri":null,"artworkUrl":null,"isrc":null,"sourceName":"soundcloud","isSeekable":true}' \
+  http://localhost:2333/v4/encodetrack
 
 # WebSocket (requires wscat: npm install -g wscat)
 wscat \
@@ -92,6 +129,8 @@ Copy `config.default.ts` → `config.ts` and edit:
 | `statsInterval` | `60000` | Stats broadcast interval (ms) |
 | `maxSearchResults` | `10` | Max results per search |
 | `maxPlaylistLength` | `100` | Max tracks loaded from a playlist |
+| `logging.file.enabled` | `false` | Save logs to files |
+| `logging.file.path` | `"logs"` | Directory for log files (daily rotation) |
 | `sources.soundcloud.clientId` | `""` | Leave empty for auto-detection |
 
 ---
@@ -106,7 +145,9 @@ Copy `config.default.ts` → `config.ts` and edit:
 | `GET` | `/v4/stats` | Memory, CPU, player counts |
 | `GET` | `/v4/loadtracks` | Search or load tracks |
 | `GET` | `/v4/decodetrack` | Decode a single encoded track |
-| `POST` | `/v4/decodetracks` | Decode multiple encoded tracks |
+| `POST` | `/v4/decodetracks` | Decode multiple encoded tracks (batch) |
+| `POST` | `/v4/encodetrack` | Encode a TrackInfo into a Lavalink v4 string |
+| `POST` | `/v4/encodetracks` | Encode multiple TrackInfo objects (batch) |
 | `PATCH` | `/v4/sessions/:sessionId` | Update session resuming/timeout |
 | `GET` | `/v4/sessions/:sessionId/players` | List all players in a session |
 | `GET` | `/v4/sessions/:sessionId/players/:guildId` | Get a specific player |
@@ -162,7 +203,7 @@ src/
 │   ├── loadtracks.ts    # GET /v4/loadtracks
 │   ├── players.ts       # Session/player CRUD
 │   ├── router.ts        # Central request router
-│   └── tracks.ts        # Decode endpoints
+│   └── tracks.ts        # encode/decode endpoints
 ├── core/
 │   ├── SessionManager.ts   # Session + player state
 │   └── WebSocketManager.ts # WS server + event emitter
@@ -172,7 +213,7 @@ src/
 │   └── index.ts         # Shared TypeScript interfaces
 ├── utils/
 │   ├── http.ts          # Native HTTP client
-│   ├── logger.ts        # Colored logger
+│   ├── logger.ts        # Colored logger with file rotation
 │   └── track.ts         # Lavalink v4 track encode/decode
 ├── index.ts             # Entry point
 └── server.ts            # HTTP + WebSocket server
@@ -191,4 +232,4 @@ PRs are welcome on the `dev` branch!
 
 ## License
 
-MIT © AurisLink Contributors
+[MIT](./LICENSE) © AurisLink Contributors

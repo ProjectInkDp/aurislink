@@ -95,7 +95,7 @@ export class SessionManager {
     const s = this.sessions.get(sessionId)
     if (!s) return null
     s.resuming = resuming
-    s.timeout  = timeout
+    s.timeout = timeout
     return s
   }
 

@@ -9,7 +9,7 @@ import { log } from '../utils/logger.js'
 import { handleLoadTracks } from './loadtracks.js'
 import { handleInfo } from './info.js'
 import { sendJson, sendError, requireAuth } from './helpers.js'
-import { handleDecodeTrack, handleDecodeTracks } from './tracks.js'
+import { handleDecodeTrack, handleDecodeTracks, handleEncodeTrack, handleEncodeTracks } from './tracks.js'
 import {
   handleUpdateSession,
   handleGetPlayers,
@@ -20,18 +20,18 @@ import {
 
 const SESSION_RE = /^\/v4\/sessions\/([^/]+)$/
 const PLAYERS_RE = /^\/v4\/sessions\/([^/]+)\/players$/
-const PLAYER_RE  = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)$/
+const PLAYER_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)$/
 
 export function createRouter(
-  config:  AurisConfig,
+  config: AurisConfig,
   sources: Map<string, Source>,
-  sm:      SessionManager,
-  wsm:     WebSocketManager,
+  sm: SessionManager,
+  wsm: WebSocketManager,
 ) {
   return async function router(req: http.IncomingMessage, res: http.ServerResponse) {
-    const url    = new URL(req.url ?? '/', `http://${req.headers.host}`)
+    const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
     const method = req.method ?? 'GET'
-    const path   = url.pathname
+    const path = url.pathname
 
     log('debug', 'Router', `${method} ${path}`)
 
@@ -52,7 +52,8 @@ export function createRouter(
       }
       const mem = process.memoryUsage()
       return sendJson(res, 200, {
-        players: totalPlayers, playingPlayers,
+        players: totalPlayers,
+        playingPlayers,
         uptime: process.uptime() * 1000,
         memory: { free: mem.heapTotal - mem.heapUsed, used: mem.heapUsed, allocated: mem.heapTotal, reservable: mem.rss },
         cpu: { cores: 1, systemLoad: 0, lavalinkLoad: 0 },
@@ -60,9 +61,11 @@ export function createRouter(
       })
     }
 
-    if (method === 'GET'  && path === '/v4/loadtracks')  return handleLoadTracks(req, res, url, sources, config)
-    if (method === 'GET'  && path === '/v4/decodetrack')  return handleDecodeTrack(req, res, url)
+    if (method === 'GET' && path === '/v4/loadtracks') return handleLoadTracks(req, res, url, sources, config)
+    if (method === 'GET' && path === '/v4/decodetrack') return handleDecodeTrack(req, res, url)
     if (method === 'POST' && path === '/v4/decodetracks') return handleDecodeTracks(req, res)
+    if (method === 'POST' && path === '/v4/encodetrack') return handleEncodeTrack(req, res)
+    if (method === 'POST' && path === '/v4/encodetracks') return handleEncodeTracks(req, res)
 
     let m = path.match(SESSION_RE)
     if (m) {
@@ -81,8 +84,8 @@ export function createRouter(
     m = path.match(PLAYER_RE)
     if (m) {
       const [, sessionId, guildId] = m
-      if (method === 'GET')    return handleGetPlayer(req, res, sessionId!, guildId!, sm)
-      if (method === 'PATCH')  return handleUpdatePlayer(req, res, sessionId!, guildId!, sm, wsm, sources, url)
+      if (method === 'GET') return handleGetPlayer(req, res, sessionId!, guildId!, sm)
+      if (method === 'PATCH') return handleUpdatePlayer(req, res, sessionId!, guildId!, sm, wsm, sources, url)
       if (method === 'DELETE') return handleDeletePlayer(req, res, sessionId!, guildId!, sm, wsm)
       return sendError(res, 405, 'Method Not Allowed', `${method} not allowed`)
     }

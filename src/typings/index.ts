@@ -1,14 +1,14 @@
 // src/typings/index.ts
 
-// ─── Track ───────────────────────────────────────────────────────────────────
+// Track
 
 export interface TrackInfo {
   identifier: string
   isSeekable: boolean
   author: string
-  length: number        // ms
+  length: number
   isStream: boolean
-  position: number      // ms
+  position: number
   title: string
   uri: string | null
   artworkUrl: string | null
@@ -22,7 +22,7 @@ export interface Track {
   pluginInfo: Record<string, unknown>
 }
 
-// ─── Load result (Lavalink v4) ────────────────────────────────────────────────
+// Load result (Lavalink v4)
 
 export type LoadType = 'track' | 'playlist' | 'search' | 'empty' | 'error'
 
@@ -40,35 +40,25 @@ export interface PlaylistInfo {
 export interface LoadResult {
   loadType: LoadType
   data:
-    | Track                                                        // track
-    | { info: PlaylistInfo; pluginInfo: Record<string, unknown>; tracks: Track[] } // playlist
-    | Track[]                                                      // search
-    | Record<string, never>                                        // empty
-    | LoadError                                                    // error
+    | Track
+    | { info: PlaylistInfo; pluginInfo: Record<string, unknown>; tracks: Track[] }
+    | Track[]
+    | Record<string, never>
+    | LoadError
 }
 
-// ─── Source interface ─────────────────────────────────────────────────────────
+// Source interface
 
 export interface Source {
-  /** Unique name used as prefix, e.g. "soundcloud" */
   readonly name: string
-  /** Search prefixes accepted, e.g. ["scsearch"] */
   readonly searchPrefixes: string[]
-
-  /** Called once at boot. Return false to disable the source. */
   setup(): Promise<boolean>
-
-  /** Return true if this source can handle the given URL. */
   accepts(url: string): boolean
-
-  /** Load a URL (track or playlist). */
   load(url: string): Promise<LoadResult>
-
-  /** Execute a search query (prefix already stripped). */
   search(query: string): Promise<LoadResult>
 }
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+// Config
 
 export interface TlsConfig {
   enabled: boolean
@@ -89,6 +79,10 @@ export interface AurisConfig {
     level: 'debug' | 'info' | 'warn' | 'error'
     timestamps: boolean
     colors: boolean
+    file?: {
+      enabled?: boolean
+      path?: string
+    }
   }
   playerUpdateInterval: number
   statsInterval: number

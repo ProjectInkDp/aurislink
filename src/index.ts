@@ -12,13 +12,13 @@ import type { AurisConfig, Source } from './typings/index.js'
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const configPath = resolve(process.cwd(), 'config.ts')
-const fallback   = resolve(process.cwd(), 'config.default.ts')
+const fallback = resolve(process.cwd(), 'config.default.ts')
 
 let config: AurisConfig
 try {
   const target = existsSync(configPath) ? configPath : fallback
-  const mod    = await import(pathToFileURL(target).href) as { default: AurisConfig }
-  config       = mod.default
+  const mod = await import(pathToFileURL(target).href) as { default: AurisConfig }
+  config = mod.default
 } catch (err) {
   console.error('[AurisLink] Failed to load config:', err)
   process.exit(1)

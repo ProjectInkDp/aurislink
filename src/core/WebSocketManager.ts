@@ -32,7 +32,7 @@ interface Client {
 // ─── WebSocketManager ─────────────────────────────────────────────────────────
 
 export class WebSocketManager {
-  private clients   = new Map<string, Client>()   // sessionId → client
+  private clients = new Map<string, Client>()   // sessionId → client
   private startedAt = Date.now()
 
   constructor(
@@ -54,7 +54,7 @@ export class WebSocketManager {
         return
       }
 
-      const userId    = req.headers['user-id'] as string | undefined
+      const userId = req.headers['user-id'] as string | undefined
       const clientName = req.headers['client-name'] as string | undefined
 
       if (!userId) {
@@ -65,7 +65,7 @@ export class WebSocketManager {
       }
 
       wss.handleUpgrade(req, socket, head, (ws) => {
-        const session  = this.sm.createSession()
+        const session = this.sm.createSession()
         const client: Client = { sessionId: session.sessionId, ws, userId }
         this.clients.set(session.sessionId, client)
 
@@ -168,7 +168,7 @@ export class WebSocketManager {
 
   broadcastStats(): void {
     const sessions = this.sm.getAllSessions()
-    let totalPlayers  = 0
+    let totalPlayers = 0
     let playingPlayers = 0
 
     for (const s of sessions) {

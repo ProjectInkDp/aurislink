@@ -16,15 +16,15 @@ import { log } from '../utils/logger.js'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SC_URL      = 'https://soundcloud.com'
-const API_URL     = 'https://api-v2.soundcloud.com'
-const ASSET_RE     = /https:\/\/a-v2\.sndcdn\.com\/assets\/[a-zA-Z0-9-]+\.js/g
+const SC_URL = 'https://soundcloud.com'
+const API_URL = 'https://api-v2.soundcloud.com'
+const ASSET_RE = /https:\/\/a-v2\.sndcdn\.com\/assets\/[a-zA-Z0-9-]+\.js/g
 const CLIENT_ID_RE = /(?:[?&\/]?(?:client_id)[\s:=&]*"?|"data":{"id":")([A-Za-z0-9]{32})"?/
 
 // Patterns for URL matching
-const TRACK_URL_RE    = /^https?:\/\/(?:www\.|m\.)?soundcloud\.com\/[^/\s]+\/(?!sets\/)[^/\s]+(?:\?.*)?$/
+const TRACK_URL_RE = /^https?:\/\/(?:www\.|m\.)?soundcloud\.com\/[^/\s]+\/(?!sets\/)[^/\s]+(?:\?.*)?$/
 const PLAYLIST_URL_RE = /^https?:\/\/(?:www\.|m\.)?soundcloud\.com\/[^/\s]+\/sets\/[^/\s]+(?:\?.*)?$/
-const USER_URL_RE     = /^https?:\/\/(?:www\.|m\.)?soundcloud\.com\/[^/\s]+\/?(?:\?.*)?$/
+const USER_URL_RE = /^https?:\/\/(?:www\.|m\.)?soundcloud\.com\/[^/\s]+\/?(?:\?.*)?$/
 
 // How long a resolved stream URL stays cached (SoundCloud CDN URLs expire around 30m)
 const STREAM_CACHE_TTL = 15 * 60 * 1000 // 15 minutes
@@ -84,16 +84,16 @@ interface CachedStream {
 // ─── Source ───────────────────────────────────────────────────────────────────
 
 export class SoundCloudSource implements Source {
-  readonly name           = 'soundcloud'
+  readonly name = 'soundcloud'
   readonly searchPrefixes = ['scsearch']
 
   private clientId: string | null = null
-  private streamCache             = new Map<string, CachedStream>()
-  private maxResults              = 10
-  private maxPlaylist             = 100
+  private streamCache = new Map<string, CachedStream>()
+  private maxResults = 10
+  private maxPlaylist = 100
 
   constructor(opts?: { clientId?: string; maxResults?: number; maxPlaylistLength?: number }) {
-    if (opts?.clientId)       this.clientId   = opts.clientId
+    if (opts?.clientId)       this.clientId = opts.clientId
     if (opts?.maxResults)     this.maxResults = opts.maxResults
     if (opts?.maxPlaylist)    this.maxPlaylist = opts.maxPlaylistLength ?? 100
   }
@@ -183,7 +183,7 @@ export class SoundCloudSource implements Source {
 
   private async _resolve(url: string): Promise<LoadResult> {
     const apiUrl = `${API_URL}/resolve?${this._params({ url })}`
-    const data   = await this._apiGet<SCTrack | SCPlaylist>(apiUrl)
+    const data = await this._apiGet<SCTrack | SCPlaylist>(apiUrl)
 
     if (!data) return this._empty()
 
@@ -217,7 +217,7 @@ export class SoundCloudSource implements Source {
   private async _buildPlaylist(pl: SCPlaylist): Promise<LoadResult> {
     // SoundCloud returns full track objects only for the first ~5 tracks.
     // Remaining entries only have { id }. We batch-fetch the rest.
-    const full: SCTrack[]   = []
+    const full: SCTrack[] = []
     const missingIds: number[] = []
 
     for (const t of pl.tracks ?? []) {
@@ -225,8 +225,8 @@ export class SoundCloudSource implements Source {
       else missingIds.push((t as { id: number }).id)
     }
 
-    const limit   = this.maxPlaylist
-    const needed  = missingIds.slice(0, Math.max(0, limit - full.length))
+    const limit = this.maxPlaylist
+    const needed = missingIds.slice(0, Math.max(0, limit - full.length))
 
     if (needed.length > 0) {
       const CHUNK = 50
@@ -338,9 +338,9 @@ export class SoundCloudSource implements Source {
 
     // Resolve the CDN URL from SoundCloud's auth endpoint
     const authUrl = `${pick.url}?client_id=${this.clientId}`
-    const res     = await httpGetJson<{ url?: string }>(authUrl)
+    const res = await httpGetJson<{ url?: string }>(authUrl)
 
-    const cdnUrl  = res?.url ?? null
+    const cdnUrl = res?.url ?? null
     if (!cdnUrl) {
       log('warn', 'SoundCloud', `Could not resolve CDN URL for track ${identifier}`)
       return null
@@ -352,8 +352,8 @@ export class SoundCloudSource implements Source {
     }
 
     const protocol = pick.format?.protocol ?? 'progressive'
-    const mime     = pick.format?.mime_type?.toLowerCase() ?? ''
-    const format   = mime.includes('mpeg') ? 'mp3' : mime.includes('aac') ? 'aac' : mime.includes('opus') ? 'opus' : 'audio'
+    const mime = pick.format?.mime_type?.toLowerCase() ?? ''
+    const format = mime.includes('mpeg') ? 'mp3' : mime.includes('aac') ? 'aac' : mime.includes('opus') ? 'opus' : 'audio'
 
     const entry: CachedStream = {
       url:       cdnUrl,
@@ -374,10 +374,10 @@ export class SoundCloudSource implements Source {
     httpStream(url).then(body => {
       if (!body) { pass.destroy(new Error('Failed to open stream')); return }
 
-      body.on('data',  chunk => { if (!pass.write(chunk)) body.pause() })
-      body.on('drain', ()    => body.resume())
-      body.on('end',   ()    => pass.end())
-      body.on('error', err   => pass.destroy(err))
+      body.on('data', chunk => { if (!pass.write(chunk)) body.pause() })
+      body.on('drain', () => body.resume())
+      body.on('end', () => pass.end())
+      body.on('error', err => pass.destroy(err))
     })
 
     return pass

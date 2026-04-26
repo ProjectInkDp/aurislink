@@ -145,7 +145,7 @@ export class DeezerSource implements Source {
       const tracks = (list?.data ?? []).map(t => this._buildTrack(t)).filter(Boolean) as Track[]
       if (tracks.length === 0) return this._empty()
       return {
-        loadType: type,
+        loadType: type === 'album' ? 'playlist' : 'playlist',
         data: {
           info: { name: res.title ?? 'Deezer Collection', selectedTrack: 0 },
           pluginInfo: {},

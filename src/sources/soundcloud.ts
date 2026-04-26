@@ -95,7 +95,7 @@ export class SoundCloudSource implements Source {
   constructor(opts?: { clientId?: string; maxResults?: number; maxPlaylistLength?: number }) {
     if (opts?.clientId)       this.clientId = opts.clientId
     if (opts?.maxResults)     this.maxResults = opts.maxResults
-    if (opts?.maxPlaylist)    this.maxPlaylist = opts.maxPlaylistLength ?? 100
+    if (opts?.maxPlaylistLength) this.maxPlaylist = opts.maxPlaylistLength
   }
 
   // ─── Setup ─────────────────────────────────────────────────────────────────

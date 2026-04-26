@@ -221,7 +221,7 @@ export default class BlowfishCBC {
   private _ivL = 0
   private _ivR = 0
   private _haveIv = false
-  private _tail = new Uint8Array(0)
+  private _tail: Uint8Array<ArrayBuffer> = new Uint8Array(new ArrayBuffer(0))
 
   constructor(key: string | Uint8Array | Buffer) {
     const keyU8 = toU8(key)
@@ -316,7 +316,8 @@ export default class BlowfishCBC {
     }
 
     const fullLen = data.length - (data.length % 8)
-    this._tail = data.length % 8 > 0 ? data.subarray(fullLen) : new Uint8Array(0)
+    const empty = new Uint8Array(new ArrayBuffer(0))
+    this._tail = data.length % 8 > 0 ? new Uint8Array(data.subarray(fullLen)) as Uint8Array<ArrayBuffer> : empty
     if (fullLen === 0) return Buffer.alloc(0)
 
     const out = Buffer.allocUnsafe(fullLen)

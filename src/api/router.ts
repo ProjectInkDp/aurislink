@@ -17,10 +17,12 @@ import {
   handleUpdatePlayer,
   handleDeletePlayer,
 } from './players.js'
+import { handleLyrics } from './lyrics.js'
 
 const SESSION_RE = /^\/v4\/sessions\/([^/]+)$/
 const PLAYERS_RE = /^\/v4\/sessions\/([^/]+)\/players$/
 const PLAYER_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)$/
+const LYRICS_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/track\/lyrics$/
 
 export function createRouter(
   config: AurisConfig,
@@ -78,6 +80,13 @@ export function createRouter(
     if (m) {
       const [, sessionId] = m
       if (method === 'GET') return handleGetPlayers(req, res, sessionId!, sm)
+      return sendError(res, 405, 'Method Not Allowed', `${method} not allowed`)
+    }
+
+    m = path.match(LYRICS_RE)
+    if (m) {
+      const [, sessionId, guildId] = m
+      if (method === 'GET') return handleLyrics(req, res, sessionId!, guildId!, sm)
       return sendError(res, 405, 'Method Not Allowed', `${method} not allowed`)
     }
 

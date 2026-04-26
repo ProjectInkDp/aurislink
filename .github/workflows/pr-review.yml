@@ -7,6 +7,7 @@ on:
 
 jobs:
   review:
+    name: Auris Assistant Review
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -32,20 +33,17 @@ jobs:
         run: |
           DIFF=$(head -c 12000 diff.txt)
 
+          SYSTEM="You are Auris Assistant, a code reviewer for AurisLink — a Lavalink v4-compatible audio server written in TypeScript/Node.js. Review the PR diff and provide concise, useful feedback. Focus on: bugs, breaking changes to the Lavalink v4 protocol, missing error handling, and code quality. Be direct and friendly. Use markdown. If the code looks good, say so."
+
           PAYLOAD=$(jq -n \
+            --arg system "$SYSTEM" \
             --arg diff "$DIFF" \
             '{
               model: "llama-3.3-70b-versatile",
               max_tokens: 1024,
               messages: [
-                {
-                  role: "system",
-                  content: "You are Auris Assistant, a code reviewer for AurisLink — a Lavalink v4-compatible audio server written in TypeScript/Node.js. Review the PR diff and provide concise, useful feedback. Focus on: bugs, breaking changes to the Lavalink v4 protocol, missing error handling, and code quality. Be direct and friendly. Use markdown. If the code looks good, say so."
-                },
-                {
-                  role: "user",
-                  content: ("Review this PR diff:\n\n```diff\n" + $diff + "\n```")
-                }
+                { role: "system", content: $system },
+                { role: "user", content: ("Review this PR diff:\n\n```diff\n" + $diff + "\n```") }
               ]
             }')
 
@@ -54,11 +52,9 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
 
-          COMMENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+          COMMENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Could not generate review."')
 
-          BODY=$(jq -n --arg body "## 🎵 Auris Assistant Review
-
-$COMMENT" '{body: $body}')
+          BODY=$(jq -n --arg comment "$COMMENT" '{ body: ("## 🎵 Auris Assistant Review\n\n" + $comment) }')
 
           curl -s -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \

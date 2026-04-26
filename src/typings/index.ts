@@ -65,8 +65,24 @@ export interface ServerConfig {
   tls: TlsConfig
 }
 
+export interface FiltersConfig {
+  // Default filter values applied to every new player.
+  // Clients can override per-player via PATCH /v4/sessions/:id/players/:guildId
+  defaultVolume?: number
+  equalizer?:  { band: number; gain: number }[]
+  lowPass?:    { smoothing?: number } | null
+  timescale?:  { speed?: number; pitch?: number; rate?: number } | null
+  tremolo?:    { frequency?: number; depth?: number } | null
+  vibrato?:    { frequency?: number; depth?: number } | null
+  rotation?:   { rotationHz?: number } | null
+  channelMix?: { leftToLeft?: number; leftToRight?: number; rightToLeft?: number; rightToRight?: number } | null
+  echo?:       { delay?: number; feedback?: number; mix?: number } | null        // AurisLink exclusive
+  reverb?:     { mix?: number; roomSize?: number; damping?: number } | null      // AurisLink exclusive
+}
+
 export interface AurisConfig {
   server: ServerConfig
+
   logging: {
     level: 'debug' | 'info' | 'warn' | 'error'
     timestamps: boolean
@@ -74,33 +90,34 @@ export interface AurisConfig {
     file?: {
       enabled?: boolean
       path?: string
+      rotation?: 'daily' | 'weekly' | 'none'
+      ttlDays?: number
     }
   }
-  playerUpdateInterval: number
-  statsInterval: number
-  maxSearchResults: number
-  maxPlaylistLength: number
-  filters?: {
-    defaultVolume?: number
-    equalizer?:  { band: number; gain: number }[]
-    lowPass?:    { smoothing?: number } | null
-    timescale?:  { speed?: number; pitch?: number; rate?: number } | null
-    tremolo?:    { frequency?: number; depth?: number } | null
-    vibrato?:    { frequency?: number; depth?: number } | null
-    rotation?:   { rotationHz?: number } | null
-    channelMix?: { leftToLeft?: number; leftToRight?: number; rightToLeft?: number; rightToRight?: number } | null
-    echo?:       { delay?: number; feedback?: number; mix?: number } | null
-    reverb?:     { mix?: number; roomSize?: number; damping?: number } | null
-  }
+
+  // ─── Playback ──────────────────────────────────────────────────────────────
+  playerUpdateInterval: number      // ms between playerUpdate WS events
+  statsInterval: number             // ms between stats WS broadcasts
+  trackStuckThresholdMs: number     // ms without progress before TrackStuck event
+  zombieThresholdMs: number         // ms before a player with no voice is destroyed
+
+  // ─── Loading limits ────────────────────────────────────────────────────────
+  maxSearchResults: number          // max tracks returned per search query
+  maxPlaylistLength: number         // max tracks loaded from a playlist/album
+
+  // ─── Default audio filters ─────────────────────────────────────────────────
+  filters?: FiltersConfig
+
+  // ─── Sources ───────────────────────────────────────────────────────────────
   sources: {
     soundcloud: {
       enabled: boolean
-      clientId: string
+      clientId: string              // leave empty for auto-detection
     }
     deezer: {
       enabled: boolean
-      arl?: string          // required for full streams
-      decryptionKey?: string
+      arl?: string                  // required for full streams
+      decryptionKey?: string        // 16-char Blowfish key, required with arl
     }
     jiosaavn: {
       enabled: boolean
@@ -114,12 +131,7 @@ export interface AurisConfig {
       }
     }
     lastfm?: {
-      apiKey?: string
+      apiKey?: string               // enables listeners/playcount in /v4/meaning
     }
   }
 }
-
-// ─── Filter extensions (AurisLink exclusive) ──────────────────────────────────
-// Augments the Filters interface in SessionManager with echo + reverb fields.
-// These are not part of the Lavalink v4 spec but are fully compatible
-// (unknown filter keys are ignored by standard clients).

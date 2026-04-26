@@ -32,12 +32,15 @@ interface Client {
 // ─── WebSocketManager ─────────────────────────────────────────────────────────
 
 export class WebSocketManager {
-  private clients = new Map<string, Client>()   // sessionId → client
+  private clients   = new Map<string, Client>()   // sessionId → client
   private startedAt = Date.now()
 
+  // TrackStuck tracking: guildId → last known position
+  private _stuckPositions = new Map<string, number>()
+
   constructor(
-    private config:  AurisConfig,
-    private sm:      SessionManager,
+    private config: AurisConfig,
+    private sm:     SessionManager,
   ) {}
 
   /** Attach to an existing HTTP/HTTPS server. */
@@ -45,7 +48,6 @@ export class WebSocketManager {
     const wss = new WebSocketServer({ noServer: true })
 
     server.on('upgrade', (req, socket, head) => {
-      // Auth
       const auth = req.headers['authorization']
       if (auth !== this.config.server.password) {
         socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
@@ -54,7 +56,7 @@ export class WebSocketManager {
         return
       }
 
-      const userId = req.headers['user-id'] as string | undefined
+      const userId     = req.headers['user-id']     as string | undefined
       const clientName = req.headers['client-name'] as string | undefined
 
       if (!userId) {
@@ -71,12 +73,11 @@ export class WebSocketManager {
 
         log('info', 'WS', `Client connected: userId=${userId} name=${clientName ?? '?'} session=${session.sessionId}`)
 
-        // Send ready event
         this._send(ws, { op: 'ready', resumed: false, sessionId: session.sessionId })
 
         ws.on('message', (data) => this._onMessage(session.sessionId, data.toString()))
-        ws.on('close', (code, reason) => this._onClose(session.sessionId, code, reason.toString()))
-        ws.on('error', (err) => log('error', 'WS', `Error on ${session.sessionId}: ${err.message}`))
+        ws.on('close',   (code, reason) => this._onClose(session.sessionId, code, reason.toString()))
+        ws.on('error',   (err) => log('error', 'WS', `Error on ${session.sessionId}: ${err.message}`))
       })
     })
 
@@ -89,7 +90,6 @@ export class WebSocketManager {
     try {
       const msg = JSON.parse(raw)
       log('debug', 'WS', `Message from ${sessionId}: ${JSON.stringify(msg)}`)
-      // Lavalink v4 clients send voiceUpdate via REST, not WS — nothing to handle here yet
     } catch {
       log('warn', 'WS', `Non-JSON message from ${sessionId}`)
     }
@@ -136,6 +136,7 @@ export class WebSocketManager {
 
   emitTrackStart(player: Player): void {
     if (!player.track) return
+    this._stuckPositions.delete(player.guildId)
     this.sendToSession(player.sessionId, {
       op:      'event',
       type:    'TrackStartEvent',
@@ -145,6 +146,7 @@ export class WebSocketManager {
   }
 
   emitTrackEnd(player: Player, reason: string): void {
+    this._stuckPositions.delete(player.guildId)
     this.sendToSession(player.sessionId, {
       op:      'event',
       type:    'TrackEndEvent',
@@ -162,6 +164,65 @@ export class WebSocketManager {
       track:   player.track,
       exception: { message: error, severity: 'fault', cause: error },
     })
+  }
+
+  emitTrackStuck(player: Player, thresholdMs: number): void {
+    log('warn', 'WS', `TrackStuck detected: guild=${player.guildId} threshold=${thresholdMs}ms`)
+    this.sendToSession(player.sessionId, {
+      op:          'event',
+      type:        'TrackStuckEvent',
+      guildId:     player.guildId,
+      track:       player.track,
+      thresholdMs,
+    })
+  }
+
+  // ── TrackStuck watchdog ──────────────────────────────────────────────────────
+
+  startStuckWatchdog(intervalMs: number, thresholdMs: number): void {
+    setInterval(() => {
+      for (const session of this.sm.getAllSessions()) {
+        for (const player of session.players.values()) {
+          if (!player.track || player.paused) {
+            this._stuckPositions.delete(player.guildId)
+            continue
+          }
+          const pos  = this.sm.getPosition(player)
+          const last = this._stuckPositions.get(player.guildId)
+
+          if (last === undefined) {
+            this._stuckPositions.set(player.guildId, pos)
+            continue
+          }
+
+          if (pos === last) {
+            this.emitTrackStuck(player, thresholdMs)
+            this._stuckPositions.delete(player.guildId)
+          } else {
+            this._stuckPositions.set(player.guildId, pos)
+          }
+        }
+      }
+    }, thresholdMs).unref()
+  }
+
+  // ── Zombie player cleanup ────────────────────────────────────────────────────
+
+  startZombieCleanup(zombieThresholdMs: number): void {
+    setInterval(() => {
+      for (const session of this.sm.getAllSessions()) {
+        for (const player of session.players.values()) {
+          // A zombie is a player with no voice connection and no active track
+          if (!player.state.connected && !player.track) {
+            const idleMs = Date.now() - player.state.time
+            if (idleMs >= zombieThresholdMs) {
+              log('info', 'WS', `Zombie player removed: guild=${player.guildId} idleMs=${idleMs}`)
+              this.sm.deletePlayer(session.sessionId, player.guildId)
+            }
+          }
+        }
+      }
+    }, zombieThresholdMs).unref()
   }
 
   // ── Stats broadcast ──────────────────────────────────────────────────────────

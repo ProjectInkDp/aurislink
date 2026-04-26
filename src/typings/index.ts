@@ -1,7 +1,5 @@
 // src/typings/index.ts
 
-// Track
-
 export interface TrackInfo {
   identifier: string
   isSeekable: boolean
@@ -21,8 +19,6 @@ export interface Track {
   info: TrackInfo
   pluginInfo: Record<string, unknown>
 }
-
-// Load result (Lavalink v4)
 
 export type LoadType = 'track' | 'playlist' | 'search' | 'empty' | 'error'
 
@@ -47,8 +43,6 @@ export interface LoadResult {
     | LoadError
 }
 
-// Source interface
-
 export interface Source {
   readonly name: string
   readonly searchPrefixes: string[]
@@ -57,8 +51,6 @@ export interface Source {
   load(url: string): Promise<LoadResult>
   search(query: string): Promise<LoadResult>
 }
-
-// Config
 
 export interface TlsConfig {
   enabled: boolean
@@ -92,6 +84,11 @@ export interface AurisConfig {
     soundcloud: {
       enabled: boolean
       clientId: string
+    }
+    deezer: {
+      enabled: boolean
+      arl?: string
+      decryptionKey?: string
     }
   }
 }

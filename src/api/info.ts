@@ -5,22 +5,22 @@ import { sendJson } from './helpers.js'
 
 const INFO = {
   version: {
-    semver:      '1.0.0',
-    major:       1,
-    minor:       0,
-    patch:       0,
-    preRelease:  null,
-    build:       null,
+    semver: '1.1.0',
+    major: 1,
+    minor: 1,
+    patch: 0,
+    preRelease: null,
+    build: null,
   },
   buildTime: Date.now(),
   git: {
-    branch:     'main',
-    commit:     'unknown',
+    branch: 'v1',
+    commit: 'unknown',
     commitTime: 0,
   },
-  jvm:    null,
+  jvm: null,
   lavaplayer: null,
-  sourceManagers: ['soundcloud'],
+  sourceManagers: ['soundcloud', 'deezer'],
   filters: ['equalizer', 'karaoke', 'timescale', 'tremolo', 'vibrato', 'rotation', 'distortion', 'channelMix', 'lowPass', 'volume'],
   plugins: [],
 }

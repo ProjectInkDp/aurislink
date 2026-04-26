@@ -1,11 +1,8 @@
-# Dependencies
 node_modules/
-
-# Build output
 dist/
 *.tsbuildinfo
 
-# Config (has secrets)
+# Config (may contain secrets)
 config.ts
 
 # Logs
@@ -19,3 +16,8 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Lock files — not committed
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

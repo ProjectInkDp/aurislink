@@ -1,15 +1,14 @@
-// src/index.ts — AurisLink entry point
+// src/index.ts
 
-import { existsSync }    from 'node:fs'
-import { resolve }       from 'node:path'
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { initLogger, log }   from './utils/logger.js'
-import { SoundCloudSource }  from './sources/soundcloud.js'
-import { createServer }      from './server.js'
+import { initLogger, log } from './utils/logger.js'
+import { SoundCloudSource } from './sources/soundcloud.js'
+import { DeezerSource } from './sources/deezer.js'
+import { createServer } from './server.js'
 import type { AurisConfig, Source } from './typings/index.js'
-
-// ── Config ────────────────────────────────────────────────────────────────────
 
 const configPath = resolve(process.cwd(), 'config.ts')
 const fallback = resolve(process.cwd(), 'config.default.ts')
@@ -27,17 +26,15 @@ try {
 initLogger(config.logging)
 
 log('info', 'AurisLink', '─────────────────────────────────────')
-log('info', 'AurisLink', '  AurisLink v1.0.0 — starting up…')
+log('info', 'AurisLink', '  AurisLink v1.1.0 — starting up…')
 log('info', 'AurisLink', '─────────────────────────────────────')
-
-// ── Sources ───────────────────────────────────────────────────────────────────
 
 const sources = new Map<string, Source>()
 
 if (config.sources.soundcloud.enabled) {
   const sc = new SoundCloudSource({
-    clientId:          config.sources.soundcloud.clientId || undefined,
-    maxResults:        config.maxSearchResults,
+    clientId: config.sources.soundcloud.clientId || undefined,
+    maxResults: config.maxSearchResults,
     maxPlaylistLength: config.maxPlaylistLength,
   })
   const ok = await sc.setup()
@@ -49,6 +46,15 @@ if (config.sources.soundcloud.enabled) {
   }
 }
 
-// ── HTTP Server ───────────────────────────────────────────────────────────────
+if (config.sources.deezer.enabled) {
+  const dz = new DeezerSource(config)
+  const ok = await dz.setup()
+  if (ok) {
+    sources.set('deezer', dz)
+    log('info', 'AurisLink', 'Deezer source ready')
+  } else {
+    log('warn', 'AurisLink', 'Deezer source failed to initialise — skipped')
+  }
+}
 
 await createServer(config, sources)

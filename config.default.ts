@@ -1,6 +1,6 @@
 // config.default.ts
-// Copy this file to config.ts and adjust as needed.
-// AurisLink will load config.ts from the project root at startup.
+// Copy to config.ts and adjust as needed.
+// AurisLink loads config.ts from the project root at startup.
 
 import type { AurisConfig } from './src/typings/index.js'
 
@@ -35,6 +35,11 @@ const config: AurisConfig = {
     soundcloud: {
       enabled: true,
       clientId: '',
+    },
+    deezer: {
+      enabled: false,
+      // arl: '',            // your Deezer ARL cookie (optional, enables full streams)
+      // decryptionKey: '',  // 16-char Blowfish key (required when arl is set)
     },
   },
 }

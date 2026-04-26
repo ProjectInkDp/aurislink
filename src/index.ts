@@ -27,7 +27,7 @@ try {
 initLogger(config.logging)
 
 log('info', 'AurisLink', '─────────────────────────────────────')
-log('info', 'AurisLink', '  AurisLink v1.1.0 — starting up…')
+log('info', 'AurisLink', '  AurisLink v1.3.6 — starting up…')
 log('info', 'AurisLink', '─────────────────────────────────────')
 
 const sources = new Map<string, Source>()

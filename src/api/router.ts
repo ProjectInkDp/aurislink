@@ -22,11 +22,15 @@ import { handleLyrics } from './lyrics.js'
 import { handleMeaning } from './meaning.js'
 import { handleLoadChapters } from './chapters.js'
 import { handleMetrics } from './metrics.js'
+import { handleHealth } from './health.js'
+import { handleLyricsSubscribe } from './lyricsSubscribe.js'
+import { checkRateLimit, getClientIp } from '../utils/rateLimit.js'
 
 const SESSION_RE = /^\/v4\/sessions\/([^/]+)$/
 const PLAYERS_RE = /^\/v4\/sessions\/([^/]+)\/players$/
 const PLAYER_RE  = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)$/
 const LYRICS_RE  = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/track\/lyrics$/
+const LYRICS_SUB_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/lyrics\/subscribe$/
 const FILTERS_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/filters$/
 
 export function createRouter(
@@ -43,7 +47,16 @@ export function createRouter(
     log('debug', 'Router', `${method} ${path}`)
 
     // Public endpoints — no auth required
+    if (method === 'GET' && path === '/v4/health') return handleHealth(req, res)
     if (method === 'GET' && path === '/v4/metrics') return handleMetrics(req, res, sm)
+
+    // Rate limiting — 120 requests per minute per IP
+    const clientIp = getClientIp(req as any)
+    if (!checkRateLimit(clientIp, 120)) {
+      res.writeHead(429, { 'content-type': 'application/json', 'retry-after': '60' })
+      res.end(JSON.stringify({ status: 429, error: 'Too Many Requests', message: 'Rate limit exceeded. Try again in 60 seconds.' }))
+      return
+    }
 
     if (path.startsWith('/v4')) {
       if (!requireAuth(req, res, config.server.password)) return
@@ -102,6 +115,13 @@ export function createRouter(
     if (m) {
       const [, sessionId] = m
       if (method === 'GET') return handleGetPlayers(req, res, sessionId!, sm)
+      return sendError(res, 405, 'Method Not Allowed', `${method} not allowed`)
+    }
+
+    m = path.match(LYRICS_SUB_RE)
+    if (m) {
+      const [, sessionId, guildId] = m
+      if (method === 'GET') return handleLyricsSubscribe(req, res, sessionId!, guildId!, sm)
       return sendError(res, 405, 'Method Not Allowed', `${method} not allowed`)
     }
 

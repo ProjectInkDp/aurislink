@@ -7,6 +7,19 @@ import type { SessionManager } from '../core/SessionManager.js'
 
 const START_TIME = Date.now()
 
+// Measure event loop lag by scheduling a zero-delay timer and seeing
+// how long it actually takes — any excess is lag caused by blocking work.
+let _eventLoopLagMs = 0
+function measureEventLoopLag() {
+  const start = process.hrtime.bigint()
+  setImmediate(() => {
+    const lag = Number(process.hrtime.bigint() - start) / 1_000_000
+    _eventLoopLagMs = Math.max(0, lag - 0)
+    setTimeout(measureEventLoopLag, 500).unref()
+  })
+}
+measureEventLoopLag()
+
 export function handleMetrics(
   _req: http.IncomingMessage,
   res: http.ServerResponse,
@@ -82,6 +95,11 @@ export function handleMetrics(
     '# HELP aurislink_players_paused Number of players with a track loaded but paused',
     '# TYPE aurislink_players_paused gauge',
     `aurislink_players_paused ${totalPlayers - playingPlayers}`,
+
+    // ─── Event loop ────────────────────────────────────────────────────
+    '# HELP aurislink_event_loop_lag_ms Event loop lag in milliseconds — high values indicate a blocked thread',
+    '# TYPE aurislink_event_loop_lag_ms gauge',
+    `aurislink_event_loop_lag_ms ${_eventLoopLagMs.toFixed(2)}`,
 
     // ─── Node.js internals ─────────────────────────────────────────────
     '# HELP aurislink_nodejs_version_info Node.js version info',

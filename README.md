@@ -217,6 +217,8 @@ jiosaavn: {
 | `GET` | `/v4/meaning` | Track bio, tags, year, listeners |
 | `GET` | `/v4/loadchapters` | Track chapters (Deezer podcast / SoundCloud parsed) |
 | `GET` | `/v4/metrics` | Prometheus-compatible plain-text metrics |
+| `GET` | `/v4/health` | Liveness check — `{ status, version, uptime }` |
+| `GET` | `/v4/sessions/:sessionId/players/:guildId/lyrics/subscribe` | SSE stream of synced lyrics lines |
 
 ### WebSocket
 

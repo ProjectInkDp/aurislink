@@ -17,6 +17,8 @@ AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.de
 | Deezer search + resolve | ❌ | ✅ | ✅ |
 | Deezer full stream (with ARL) | ❌ | ✅ | ✅ |
 | Stream URL cache w/ TTL | ❌ | ❌ | ✅ |
+| Lyrics (synced + plain) | ❌ | ✅ | ✅ |
+| Track meaning (bio, tags, stats) | ❌ | ⚠️ Partial | ✅ |
 | Native TLS | ❌ | ❌ | ✅ |
 | File logging w/ daily rotation | ❌ | ❌ | ✅ |
 | encodeTrack / decodeTracks REST | ❌ | ✅ | ✅ |
@@ -90,6 +92,14 @@ curl -H "Authorization: youshallnotpass" \
 curl -H "Authorization: youshallnotpass" \
   "http://localhost:2333/v4/loadtracks?identifier=https://www.deezer.com/album/302127"
 
+# Lyrics for the current track in a player
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/sessions/SESSION_ID/players/GUILD_ID/track/lyrics"
+
+# Track meaning — bio, tags, year, listeners (Wikipedia + MusicBrainz + Last.fm)
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/meaning?encodedTrack=BASE64_HERE&language=pt"
+
 # Decode a track
 curl -H "Authorization: youshallnotpass" \
   "http://localhost:2333/v4/decodetrack?encodedTrack=<base64>"
@@ -126,6 +136,7 @@ Copy `config.default.ts` → `config.ts` and edit:
 | `sources.deezer.enabled` | `false` | Enable Deezer source |
 | `sources.deezer.arl` | `""` | Deezer ARL cookie (enables full streams) |
 | `sources.deezer.decryptionKey` | `""` | 16-char Blowfish key (required with ARL) |
+| `lastFmKey` | `""` | Last.fm API key — enables listeners/playcount in `/v4/meaning` |
 
 ### Deezer setup
 
@@ -161,6 +172,8 @@ deezer: {
 | `GET` | `/v4/sessions/:sessionId/players/:guildId` | Get a specific player |
 | `PATCH` | `/v4/sessions/:sessionId/players/:guildId` | Create/update a player |
 | `DELETE` | `/v4/sessions/:sessionId/players/:guildId` | Destroy a player |
+| `GET` | `/v4/sessions/:sessionId/players/:guildId/track/lyrics` | Lyrics for the current track (Deezer + lrclib.net fallback) |
+| `GET` | `/v4/meaning` | Track bio, tags, year, listeners (Wikipedia + MusicBrainz + Last.fm) |
 
 ### WebSocket
 
@@ -202,6 +215,8 @@ src/
 │   ├── helpers.ts          # sendJson, sendError, requireAuth
 │   ├── info.ts             # GET /v4/info
 │   ├── loadtracks.ts       # GET /v4/loadtracks
+│   ├── lyrics.ts           # GET /v4/sessions/:id/players/:id/track/lyrics
+│   ├── meaning.ts          # GET /v4/meaning
 │   ├── players.ts          # Session/player CRUD
 │   ├── router.ts           # Central request router
 │   └── tracks.ts           # encode/decode endpoints

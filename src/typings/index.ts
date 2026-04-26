@@ -90,6 +90,17 @@ export interface AurisConfig {
       arl?: string
       decryptionKey?: string
     }
+    jiosaavn: {
+      enabled: boolean
+      playlistLoadLimit?: number
+      artistLoadLimit?: number
+      secretKey?: string
+      proxy?: {
+        url?: string
+        username?: string
+        password?: string
+      }
+    }
     lastfm?: {
       apiKey?: string
     }

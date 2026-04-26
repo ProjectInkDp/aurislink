@@ -16,6 +16,8 @@ AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.de
 | SoundCloud (auto client_id refresh) | ❌ | ❌ | ✅ |
 | Deezer search + resolve | ❌ | ✅ | ✅ |
 | Deezer full stream (with ARL) | ❌ | ✅ | ✅ |
+| JioSaavn search + resolve + stream | ❌ | ✅ | ✅ |
+| JioSaavn proxy support | ❌ | ✅ | ✅ |
 | Stream URL cache w/ TTL | ❌ | ❌ | ✅ |
 | Lyrics (synced + plain) | ❌ | ✅ | ✅ |
 | Track meaning (bio, tags, stats) | ❌ | ⚠️ Partial | ✅ |
@@ -92,6 +94,18 @@ curl -H "Authorization: youshallnotpass" \
 curl -H "Authorization: youshallnotpass" \
   "http://localhost:2333/v4/loadtracks?identifier=https://www.deezer.com/album/302127"
 
+# Search JioSaavn
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/loadtracks?identifier=jssearch:arijit singh"
+
+# Load a JioSaavn track URL
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/loadtracks?identifier=https://www.jiosaavn.com/song/apna-bana-le/ATIfejZ9bWw"
+
+# Load a JioSaavn album
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/loadtracks?identifier=https://www.jiosaavn.com/album/bhediya/wSM2AOubajk_"
+
 # Lyrics for the current track in a player
 curl -H "Authorization: youshallnotpass" \
   "http://localhost:2333/v4/sessions/SESSION_ID/players/GUILD_ID/track/lyrics"
@@ -136,6 +150,13 @@ Copy `config.default.ts` → `config.ts` and edit:
 | `sources.deezer.enabled` | `false` | Enable Deezer source |
 | `sources.deezer.arl` | `""` | Deezer ARL cookie (enables full streams) |
 | `sources.deezer.decryptionKey` | `""` | 16-char Blowfish key (required with ARL) |
+| `sources.jiosaavn.enabled` | `false` | Enable JioSaavn source |
+| `sources.jiosaavn.playlistLoadLimit` | `50` | Max tracks loaded from a playlist/album |
+| `sources.jiosaavn.artistLoadLimit` | `20` | Max tracks loaded from an artist |
+| `sources.jiosaavn.secretKey` | `"38346591"` | DES/ECB key — leave empty to use built-in default |
+| `sources.jiosaavn.proxy.url` | `""` | HTTP/HTTPS proxy (useful if hosted outside India) |
+| `sources.jiosaavn.proxy.username` | `""` | Optional proxy username |
+| `sources.jiosaavn.proxy.password` | `""` | Optional proxy password |
 | `lastFmKey` | `""` | Last.fm API key — enables listeners/playcount in `/v4/meaning` |
 
 ### Deezer setup
@@ -151,6 +172,28 @@ deezer: {
 ```
 
 > The ARL is a long-lived session cookie from your Deezer account. The decryption key is a static value used by Deezer's Blowfish-CBC stream cipher — it is widely documented in open-source projects.
+
+### JioSaavn setup
+
+JioSaavn works out of the box — no account or API key required. Just enable it:
+
+```ts
+jiosaavn: {
+  enabled: true,
+}
+```
+
+> JioSaavn uses region blocking. If AurisLink is hosted outside India, configure a proxy:
+> ```ts
+> jiosaavn: {
+>   enabled: true,
+>   proxy: {
+>     url: 'https://your-india-proxy.example.com',
+>     username: 'user',   // optional
+>     password: 'pass',   // optional
+>   },
+> }
+> ```
 
 ---
 
@@ -174,6 +217,7 @@ deezer: {
 | `DELETE` | `/v4/sessions/:sessionId/players/:guildId` | Destroy a player |
 | `GET` | `/v4/sessions/:sessionId/players/:guildId/track/lyrics` | Lyrics for the current track (Deezer + lrclib.net fallback) |
 | `GET` | `/v4/meaning` | Track bio, tags, year, listeners (Wikipedia + MusicBrainz + Last.fm) |
+| `GET` | `/v4/loadchapters` | Track chapters — Deezer podcast chapters or SoundCloud timestamp-parsed chapters |
 
 ### WebSocket
 
@@ -202,6 +246,7 @@ Client-Name: <your client name>
 |---|---|---|---|
 | SoundCloud | ✅ Ready | `scsearch:` | Auto client_id refresh, stream cache, 401 retry |
 | Deezer | ✅ Ready | `dzsearch:` | Public API (metadata); full streams with ARL |
+| JioSaavn | ✅ Ready | `jssearch:` | DES/ECB stream decryption, proxy support, 320kbps |
 | YouTube | 🔜 Planned | `ytsearch:` | — |
 | Spotify | 🔜 Planned | `spsearch:` | — |
 
@@ -215,6 +260,7 @@ src/
 │   ├── helpers.ts          # sendJson, sendError, requireAuth
 │   ├── info.ts             # GET /v4/info
 │   ├── loadtracks.ts       # GET /v4/loadtracks
+│   ├── chapters.ts         # GET /v4/loadchapters
 │   ├── lyrics.ts           # GET /v4/sessions/:id/players/:id/track/lyrics
 │   ├── meaning.ts          # GET /v4/meaning
 │   ├── players.ts          # Session/player CRUD
@@ -224,9 +270,11 @@ src/
 │   ├── SessionManager.ts   # Session + player state
 │   └── WebSocketManager.ts # WS server + event emitter
 ├── decrypters/
-│   └── blowfish-cbc.ts     # Blowfish-CBC (Deezer stream decryption)
+│   ├── blowfish-cbc.ts     # Blowfish-CBC (Deezer stream decryption)
+│   └── des-ecb.ts          # DES/ECB (JioSaavn stream decryption)
 ├── sources/
 │   ├── deezer.ts           # Deezer source
+│   ├── jiosaavn.ts         # JioSaavn source
 │   └── soundcloud.ts       # SoundCloud source
 ├── typings/
 │   └── index.ts            # Shared TypeScript interfaces

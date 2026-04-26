@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url'
 import { initLogger, log } from './utils/logger.js'
 import { SoundCloudSource } from './sources/soundcloud.js'
 import { DeezerSource } from './sources/deezer.js'
+import { JioSaavnSource } from './sources/jiosaavn.js'
 import { createServer } from './server.js'
 import type { AurisConfig, Source } from './typings/index.js'
 
@@ -54,6 +55,17 @@ if (config.sources.deezer.enabled) {
     log('info', 'AurisLink', 'Deezer source ready')
   } else {
     log('warn', 'AurisLink', 'Deezer source failed to initialise — skipped')
+  }
+}
+
+if (config.sources.jiosaavn.enabled) {
+  const js = new JioSaavnSource(config)
+  const ok = await js.setup()
+  if (ok) {
+    sources.set('jiosaavn', js)
+    log('info', 'AurisLink', 'JioSaavn source ready')
+  } else {
+    log('warn', 'AurisLink', 'JioSaavn source failed to initialise — skipped')
   }
 }
 

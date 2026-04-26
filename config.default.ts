@@ -36,6 +36,17 @@ const config: AurisConfig = {
       enabled: true,
       clientId: '',
     },
+    jiosaavn: {
+      enabled: false,
+      playlistLoadLimit: 50,    // max tracks loaded from a playlist/album
+      artistLoadLimit: 20,      // max tracks loaded from an artist
+      // secretKey: '38346591', // DES/ECB key — leave empty to use built-in default
+      // proxy: {
+      //   url: '',             // HTTP/HTTPS proxy (useful outside India)
+      //   username: '',
+      //   password: '',
+      // },
+    },
     deezer: {
       enabled: false,
       // arl: '',

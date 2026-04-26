@@ -38,8 +38,11 @@ const config: AurisConfig = {
     },
     deezer: {
       enabled: false,
-      // arl: '',            // your Deezer ARL cookie (optional, enables full streams)
-      // decryptionKey: '',  // 16-char Blowfish key (required when arl is set)
+      // arl: '',
+      // decryptionKey: '',
+    },
+    lastfm: {
+      apiKey: '',  // optional — enables listener/playcount stats in /v4/meaning
     },
   },
 }

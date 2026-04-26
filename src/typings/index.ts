@@ -90,5 +90,8 @@ export interface AurisConfig {
       arl?: string
       decryptionKey?: string
     }
+    lastfm?: {
+      apiKey?: string
+    }
   }
 }

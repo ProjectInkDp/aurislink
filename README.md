@@ -216,6 +216,7 @@ jiosaavn: {
 | `GET` | `/v4/sessions/:sessionId/players/:guildId/track/lyrics` | Lyrics for the current track |
 | `GET` | `/v4/meaning` | Track bio, tags, year, listeners |
 | `GET` | `/v4/loadchapters` | Track chapters (Deezer podcast / SoundCloud parsed) |
+| `GET` | `/v4/metrics` | Prometheus-compatible plain-text metrics |
 
 ### WebSocket
 

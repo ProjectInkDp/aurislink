@@ -69,4 +69,35 @@ if (config.sources.jiosaavn.enabled) {
   }
 }
 
-await createServer(config, sources)
+const server = await createServer(config, sources)
+
+// ─── Graceful shutdown ──────────────────────────────────────────────────────
+// Inspired by Lavalink's clean session teardown on process exit.
+// Closes the HTTP server and all active WebSocket connections before exiting
+// so clients detect the disconnect immediately instead of timing out.
+
+async function shutdown(signal: string) {
+  log('info', 'AurisLink', `Received ${signal} — shutting down gracefully…`)
+
+  const forceExitTimer = setTimeout(() => {
+    log('warn', 'AurisLink', 'Graceful shutdown timeout — forcing exit')
+    process.exit(1)
+  }, 5_000)
+  forceExitTimer.unref()
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.close(err => err ? reject(err) : resolve())
+    })
+    log('info', 'AurisLink', 'HTTP server closed — goodbye!')
+  } catch (err) {
+    log('error', 'AurisLink', `Error during shutdown: ${err}`)
+  } finally {
+    clearTimeout(forceExitTimer)
+    process.exit(0)
+  }
+}
+
+process.once('SIGINT',  () => shutdown('SIGINT'))
+process.once('SIGTERM', () => shutdown('SIGTERM'))
+process.once('SIGHUP',  () => shutdown('SIGHUP'))

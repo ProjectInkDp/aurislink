@@ -21,6 +21,7 @@ import {
 import { handleLyrics } from './lyrics.js'
 import { handleMeaning } from './meaning.js'
 import { handleLoadChapters } from './chapters.js'
+import { handleMetrics } from './metrics.js'
 
 const SESSION_RE = /^\/v4\/sessions\/([^/]+)$/
 const PLAYERS_RE = /^\/v4\/sessions\/([^/]+)\/players$/
@@ -40,6 +41,9 @@ export function createRouter(
     const path = url.pathname
 
     log('debug', 'Router', `${method} ${path}`)
+
+    // Public endpoints — no auth required
+    if (method === 'GET' && path === '/v4/metrics') return handleMetrics(req, res, sm)
 
     if (path.startsWith('/v4')) {
       if (!requireAuth(req, res, config.server.password)) return

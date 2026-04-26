@@ -18,6 +18,7 @@ import {
   handleDeletePlayer,
 } from './players.js'
 import { handleLyrics } from './lyrics.js'
+import { handleMeaning } from './meaning.js'
 
 const SESSION_RE = /^\/v4\/sessions\/([^/]+)$/
 const PLAYERS_RE = /^\/v4\/sessions\/([^/]+)\/players$/
@@ -64,6 +65,7 @@ export function createRouter(
     }
 
     if (method === 'GET' && path === '/v4/loadtracks') return handleLoadTracks(req, res, url, sources, config)
+    if (method === 'GET' && path === '/v4/meaning') return handleMeaning(req, res, url, config.sources.lastfm?.apiKey)
     if (method === 'GET' && path === '/v4/decodetrack') return handleDecodeTrack(req, res, url)
     if (method === 'POST' && path === '/v4/decodetracks') return handleDecodeTracks(req, res)
     if (method === 'POST' && path === '/v4/encodetrack') return handleEncodeTrack(req, res)

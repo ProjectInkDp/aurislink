@@ -31,6 +31,32 @@ const config: AurisConfig = {
   maxSearchResults: 10,
   maxPlaylistLength: 100,
 
+  // ─── Audio Filters ────────────────────────────────────────────────────────
+  // Default filter values applied to every new player.
+  // These are the starting values — clients can override per-player at any
+  // time via PATCH /v4/sessions/:id/players/:guildId with { filters: { ... } }
+  filters: {
+    defaultVolume: 1.0,       // 0.0 = silence, 1.0 = normal, 5.0 = max
+
+    equalizer: [],            // [{ band: 0-14, gain: -0.25..1.0 }] — 15-band biquad EQ
+
+    lowPass: null,            // { smoothing: 1–100 } — higher = more bass, null = off
+
+    timescale: null,          // { speed: 1.0, pitch: 1.0, rate: 1.0 } — null = off
+
+    tremolo: null,            // { frequency: 2.0, depth: 0.5 } — amplitude LFO, null = off
+
+    vibrato: null,            // { frequency: 2.0, depth: 0.5 } — pitch LFO, null = off
+
+    rotation: null,           // { rotationHz: 0.2 } — 8D audio panning, null = off
+
+    channelMix: null,         // { leftToLeft, leftToRight, rightToLeft, rightToRight } — null = off
+
+    echo: null,               // { delay: 300, feedback: 0.4, mix: 0.5 } — AurisLink exclusive, null = off
+
+    reverb: null,             // { mix: 0.3, roomSize: 0.5, damping: 0.5 } — AurisLink exclusive, null = off
+  },
+
   sources: {
     soundcloud: {
       enabled: true,
@@ -38,22 +64,22 @@ const config: AurisConfig = {
     },
     jiosaavn: {
       enabled: false,
-      playlistLoadLimit: 50,    // max tracks loaded from a playlist/album
-      artistLoadLimit: 20,      // max tracks loaded from an artist
-      // secretKey: '38346591', // DES/ECB key — leave empty to use built-in default
-      // proxy: {
-      //   url: '',             // HTTP/HTTPS proxy (useful outside India)
-      //   username: '',
-      //   password: '',
-      // },
+      playlistLoadLimit: 50,
+      artistLoadLimit: 20,
+      secretKey: '38346591',
+      proxy: {
+        url: '',
+        username: '',
+        password: '',
+      },
     },
     deezer: {
       enabled: false,
-      // arl: '',
-      // decryptionKey: '',
+      arl: '',
+      decryptionKey: '',
     },
     lastfm: {
-      apiKey: '',  // optional — enables listener/playcount stats in /v4/meaning
+      apiKey: '',
     },
   },
 }

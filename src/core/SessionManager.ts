@@ -18,6 +18,8 @@ export interface Filters {
   distortion?:  { sinOffset?: number; sinScale?: number; cosOffset?: number; cosScale?: number; tanOffset?: number; tanScale?: number; offset?: number; scale?: number } | null
   channelMix?:  { leftToLeft?: number; leftToRight?: number; rightToLeft?: number; rightToRight?: number } | null
   lowPass?:     { smoothing?: number } | null
+  echo?:        { delay?: number; feedback?: number; mix?: number } | null
+  reverb?:      { mix?: number; roomSize?: number; damping?: number } | null
 }
 
 export interface PlayerState {

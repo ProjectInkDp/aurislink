@@ -16,6 +16,7 @@ import {
   handleGetPlayer,
   handleUpdatePlayer,
   handleDeletePlayer,
+  handleGetFilters,
 } from './players.js'
 import { handleLyrics } from './lyrics.js'
 import { handleMeaning } from './meaning.js'
@@ -23,8 +24,9 @@ import { handleLoadChapters } from './chapters.js'
 
 const SESSION_RE = /^\/v4\/sessions\/([^/]+)$/
 const PLAYERS_RE = /^\/v4\/sessions\/([^/]+)\/players$/
-const PLAYER_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)$/
-const LYRICS_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/track\/lyrics$/
+const PLAYER_RE  = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)$/
+const LYRICS_RE  = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/track\/lyrics$/
+const FILTERS_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/filters$/
 
 export function createRouter(
   config: AurisConfig,
@@ -44,6 +46,18 @@ export function createRouter(
     }
 
     if (method === 'GET' && path === '/v4/info') return handleInfo(req, res)
+
+    // Lists all active sessions — useful to grab sessionId for testing
+    if (method === 'GET' && path === '/v4/sessions') {
+      const sessions = sm.getAllSessions().map(s => ({
+        sessionId:   s.sessionId,
+        resuming:    s.resuming,
+        timeout:     s.timeout,
+        connectedAt: s.connectedAt,
+        players:     s.players.size,
+      }))
+      return sendJson(res, 200, sessions)
+    }
 
     if (method === 'GET' && path === '/v4/stats') {
       const sessions = sm.getAllSessions()
@@ -91,6 +105,13 @@ export function createRouter(
     if (m) {
       const [, sessionId, guildId] = m
       if (method === 'GET') return handleLyrics(req, res, sessionId!, guildId!, sm)
+      return sendError(res, 405, 'Method Not Allowed', `${method} not allowed`)
+    }
+
+    m = path.match(FILTERS_RE)
+    if (m) {
+      const [, sessionId, guildId] = m
+      if (method === 'GET') return handleGetFilters(req, res, sessionId!, guildId!, sm)
       return sendError(res, 405, 'Method Not Allowed', `${method} not allowed`)
     }
 

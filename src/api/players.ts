@@ -4,10 +4,12 @@
 import type http from 'node:http'
 import type { SessionManager } from '../core/SessionManager.js'
 import type { WebSocketManager } from '../core/WebSocketManager.js'
+import type { Filters } from '../core/SessionManager.js'
 import type { Source } from '../typings/index.js'
 import { decodeTrack } from '../utils/track.js'
 import { sendJson, sendError } from './helpers.js'
 import { log } from '../utils/logger.js'
+import { applyFilters, activeFilterNames } from '../filters/FilterChain.js'
 
 // ─── Body reader ──────────────────────────────────────────────────────────────
 
@@ -96,7 +98,7 @@ export async function handleUpdatePlayer(
     track?:   { encoded?: string | null; identifier?: string } | null
     volume?:  number
     paused?:  boolean
-    filters?: Record<string, unknown>
+    filters?: Filters
     voice?:   { token: string; endpoint: string; sessionId: string }
     position?: number
     endTime?:  number
@@ -115,7 +117,7 @@ export async function handleUpdatePlayer(
     log('info', 'Players', `Voice state updated for guild=${guildId}`)
   }
 
-  // ── Volume ──
+  // ── Volume (player-level, Lavalink compat — 0–1000) ──
   if (body.volume !== undefined) {
     player.volume = Math.max(0, Math.min(1000, body.volume))
   }
@@ -125,7 +127,6 @@ export async function handleUpdatePlayer(
     if (body.paused && !player.paused) {
       player._pausedAt = Date.now()
     } else if (!body.paused && player.paused) {
-      // Resume: shift start time so position is preserved
       if (player._pausedAt > 0 && player._startedAt > 0) {
         player._startedAt += Date.now() - player._pausedAt
       }
@@ -134,34 +135,31 @@ export async function handleUpdatePlayer(
     player.paused = body.paused
   }
 
-  // ── Filters ──
+  // ── Filters — merge e loga quais ficaram ativos ──
   if (body.filters !== undefined) {
     player.filters = { ...player.filters, ...body.filters }
+    const active = activeFilterNames(player.filters)
+    log('info', 'Players', `Filters updated guild=${guildId} active=[${active.join(', ') || 'none'}]`)
   }
 
   // ── Track ──
   if (body.track !== undefined) {
-    // noReplace: skip if already playing
     if (noReplace && player.track) {
       return sendJson(res, 200, sm.serializePlayer(player))
     }
 
     if (body.track === null || body.track.encoded === null) {
-      // Stop track
-      if (player.track) {
-        wsm.emitTrackEnd(player, 'stopped')
-      }
-      player.track = null
+      if (player.track) wsm.emitTrackEnd(player, 'stopped')
+      player.track     = null
       player._startedAt = 0
-      player._pausedAt = 0
+      player._pausedAt  = 0
     } else if (body.track.encoded) {
-      // Load from encoded string
       try {
         const info = decodeTrack(body.track.encoded)
-        player.track = { encoded: body.track.encoded, info, pluginInfo: {} }
+        player.track      = { encoded: body.track.encoded, info, pluginInfo: {} }
         player._startedAt = Date.now()
-        player._pausedAt = 0
-        player.paused = false
+        player._pausedAt  = 0
+        player.paused     = false
         wsm.emitTrackStart(player)
         log('info', 'Players', `Track started: "${info.title}" guild=${guildId}`)
       } catch (err) {
@@ -169,7 +167,6 @@ export async function handleUpdatePlayer(
         return sendError(res, 400, 'Bad Request', `Invalid track encoding: ${msg}`)
       }
     } else if (body.track.identifier) {
-      // Load by identifier — search through sources
       let found = false
       for (const source of sources.values()) {
         if (source.accepts(body.track.identifier)) {
@@ -177,10 +174,10 @@ export async function handleUpdatePlayer(
             const result = await source.load(body.track.identifier)
             if (result.loadType === 'track') {
               const track = result.data as import('../typings/index.js').Track
-              player.track = track
+              player.track      = track
               player._startedAt = Date.now()
-              player._pausedAt = 0
-              player.paused = false
+              player._pausedAt  = 0
+              player.paused     = false
               wsm.emitTrackStart(player)
               log('info', 'Players', `Track started via identifier: "${track.info.title}" guild=${guildId}`)
               found = true
@@ -198,11 +195,11 @@ export async function handleUpdatePlayer(
     }
   }
 
-  // ── Seek (position) ──
+  // ── Seek ──
   if (body.position !== undefined && player.track) {
     const seekTo = Math.max(0, Math.min(body.position, player.track.info.length))
     player._startedAt = Date.now() - seekTo
-    player._pausedAt = 0
+    player._pausedAt  = 0
     log('info', 'Players', `Seek to ${seekTo}ms guild=${guildId}`)
   }
 
@@ -228,4 +225,37 @@ export function handleDeletePlayer(
 
   res.writeHead(204)
   res.end()
+}
+
+// ─── GET /v4/sessions/:sessionId/players/:guildId/filters ────────────────────
+// Test endpoint — returns active filters + applies pipeline to a silent buffer.
+
+export function handleGetFilters(
+  _req: http.IncomingMessage,
+  res:  http.ServerResponse,
+  sessionId: string,
+  guildId:   string,
+  sm:        SessionManager,
+) {
+  const player = sm.getPlayer(sessionId, guildId)
+  if (!player) return sendError(res, 404, 'Not Found', `Player for guild ${guildId} not found`)
+
+  // Run a tiny silent PCM buffer through the pipeline to confirm no crash
+  const testChunk = Buffer.alloc(512, 0)
+  let pipelineOk = true
+  let pipelineError = ''
+  try {
+    applyFilters(testChunk, player.filters)
+  } catch (err) {
+    pipelineOk   = false
+    pipelineError = err instanceof Error ? err.message : String(err)
+  }
+
+  sendJson(res, 200, {
+    guildId,
+    filters:      player.filters,
+    activeFilters: activeFilterNames(player.filters),
+    pipelineOk,
+    pipelineError: pipelineOk ? null : pipelineError,
+  })
 }

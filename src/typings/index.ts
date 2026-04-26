@@ -80,6 +80,18 @@ export interface AurisConfig {
   statsInterval: number
   maxSearchResults: number
   maxPlaylistLength: number
+  filters?: {
+    defaultVolume?: number
+    equalizer?:  { band: number; gain: number }[]
+    lowPass?:    { smoothing?: number } | null
+    timescale?:  { speed?: number; pitch?: number; rate?: number } | null
+    tremolo?:    { frequency?: number; depth?: number } | null
+    vibrato?:    { frequency?: number; depth?: number } | null
+    rotation?:   { rotationHz?: number } | null
+    channelMix?: { leftToLeft?: number; leftToRight?: number; rightToLeft?: number; rightToRight?: number } | null
+    echo?:       { delay?: number; feedback?: number; mix?: number } | null
+    reverb?:     { mix?: number; roomSize?: number; damping?: number } | null
+  }
   sources: {
     soundcloud: {
       enabled: boolean
@@ -87,7 +99,7 @@ export interface AurisConfig {
     }
     deezer: {
       enabled: boolean
-      arl?: string
+      arl?: string          // required for full streams
       decryptionKey?: string
     }
     jiosaavn: {
@@ -106,3 +118,8 @@ export interface AurisConfig {
     }
   }
 }
+
+// ─── Filter extensions (AurisLink exclusive) ──────────────────────────────────
+// Augments the Filters interface in SessionManager with echo + reverb fields.
+// These are not part of the Lavalink v4 spec but are fully compatible
+// (unknown filter keys are ignored by standard clients).

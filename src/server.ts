@@ -11,7 +11,7 @@ import { SessionManager } from './core/SessionManager.js'
 import { WebSocketManager } from './core/WebSocketManager.js'
 
 export async function createServer(config: AurisConfig, sources: Map<string, Source>) {
-  const sm = new SessionManager()
+  const sm  = new SessionManager()
   const wsm = new WebSocketManager(config, sm)
 
   const router = createRouter(config, sources, sm, wsm)
@@ -40,9 +40,17 @@ export async function createServer(config: AurisConfig, sources: Map<string, Sou
   // Attach WebSocket
   wsm.attach(server)
 
-  // Stats broadcast interval
+  // Stats broadcast
   const statsMs = config.statsInterval ?? 60_000
-  setInterval(() => wsm.broadcastStats(), statsMs)
+  setInterval(() => wsm.broadcastStats(), statsMs).unref()
+
+  // TrackStuck watchdog
+  const stuckMs = config.trackStuckThresholdMs ?? 10_000
+  wsm.startStuckWatchdog(stuckMs, stuckMs)
+
+  // Zombie player cleanup
+  const zombieMs = config.zombieThresholdMs ?? 60_000
+  wsm.startZombieCleanup(zombieMs)
 
   await new Promise<void>(resolve => {
     server.listen(config.server.port, config.server.host, () => resolve())

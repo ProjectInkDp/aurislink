@@ -123,13 +123,13 @@ export async function handleLyrics(
   sessions: SessionManager
 ) {
   const player = sessions.getPlayer(sessionId, guildId)
-  if (!player) return sendError(res, 404, 'Player not found')
+  if (!player) return sendError(res, 404, 'Not Found', 'Player not found')
 
   const encoded = player.track?.encoded ?? null
-  if (!encoded) return sendError(res, 404, 'No track currently playing')
+  if (!encoded) return sendError(res, 404, 'Not Found', 'No track currently playing')
 
   let info: ReturnType<typeof decodeTrack> | null = null
-  try { info = decodeTrack(encoded) } catch { return sendError(res, 400, 'Could not decode track') }
+  try { info = decodeTrack(encoded) } catch { return sendError(res, 400, 'Bad Request', 'Could not decode track') }
 
   let lyrics: LyricsResponse | null = null
 
@@ -143,7 +143,7 @@ export async function handleLyrics(
     lyrics = await fromLrcLib(info.title, info.author, undefined, info.length)
   }
 
-  if (!lyrics) return sendError(res, 404, 'No lyrics found')
+  if (!lyrics) return sendError(res, 404, 'Not Found', 'No lyrics found')
 
   sendJson(res, 200, lyrics)
 }

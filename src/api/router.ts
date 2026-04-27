@@ -24,6 +24,8 @@ import { handleLoadChapters } from './chapters.js'
 import { handleMetrics } from './metrics.js'
 import { handleHealth } from './health.js'
 import { handleLyricsSubscribe } from './lyricsSubscribe.js'
+import { handleRoutePlannerStatus, handleRoutePlannerFreeAddress, handleRoutePlannerFreeAll } from './routePlanner.js'
+import type { RoutePlanner } from '../core/RoutePlanner.js'
 import { checkRateLimit, getClientIp } from '../utils/rateLimit.js'
 
 const SESSION_RE = /^\/v4\/sessions\/([^/]+)$/
@@ -38,13 +40,14 @@ export function createRouter(
   sources: Map<string, Source>,
   sm: SessionManager,
   wsm: WebSocketManager,
+  rp: RoutePlanner | null = null,
 ) {
   return async function router(req: http.IncomingMessage, res: http.ServerResponse) {
     const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
     const method = req.method ?? 'GET'
     const path = url.pathname
 
-    log('debug', 'Router', `${method} ${path}`)
+    log('info', 'Router', `→ ${method} ${path}`)
 
     // Public endpoints — no auth required
     if (method === 'GET' && path === '/v4/health') return handleHealth(req, res)
@@ -147,6 +150,10 @@ export function createRouter(
       if (method === 'DELETE') return handleDeletePlayer(req, res, sessionId!, guildId!, sm, wsm)
       return sendError(res, 405, 'Method Not Allowed', `${method} not allowed`)
     }
+
+    if (path === '/v4/routeplanner/status' && method === 'GET') return handleRoutePlannerStatus(req, res, rp)
+    if (path === '/v4/routeplanner/free/address' && method === 'POST') return handleRoutePlannerFreeAddress(req, res, rp)
+    if (path === '/v4/routeplanner/free/all' && method === 'POST') return handleRoutePlannerFreeAll(req, res, rp)
 
     sendError(res, 404, 'Not Found', `No route for ${method} ${path}`)
   }

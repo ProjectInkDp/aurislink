@@ -68,6 +68,16 @@ const config: AurisConfig = {
   },
 
   // ─── Sources ───────────────────────────────────────────────────────────────
+  // ─── Route planner ────────────────────────────────────────────────────────
+  // Rotates outbound IPs when one gets rate-limited.
+  // Leave ipPool empty to disable.
+  routePlanner: {
+    enabled: false,
+    ipPool: [],                   // e.g. ["1.2.3.4", "1.2.3.5"]
+    strategy: 'RotateOnBan',      // RotateOnBan | LoadBalance | NanoSwitch
+    cooldownMs: 600_000,          // 10 minutes
+  },
+
   sources: {
 
     soundcloud: {

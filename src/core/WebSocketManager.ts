@@ -71,7 +71,7 @@ export class WebSocketManager {
         const client: Client = { sessionId: session.sessionId, ws, userId }
         this.clients.set(session.sessionId, client)
 
-        log('info', 'WS', `Client connected: userId=${userId} name=${clientName ?? '?'} session=${session.sessionId}`)
+        log('info', 'WS', `✓ Client connected | userId=${userId} | name=${clientName ?? '?'} | session=${session.sessionId}`)
 
         this._send(ws, { op: 'ready', resumed: false, sessionId: session.sessionId })
 
@@ -96,7 +96,7 @@ export class WebSocketManager {
   }
 
   private _onClose(sessionId: string, code: number, reason: string): void {
-    log('info', 'WS', `Client disconnected: session=${sessionId} code=${code} reason=${reason || '—'}`)
+    log('info', 'WS', `✗ Client disconnected | session=${sessionId} | code=${code} | reason=${reason || '—'}`)
     this.clients.delete(sessionId)
     this.sm.deleteSession(sessionId)
   }
@@ -167,7 +167,7 @@ export class WebSocketManager {
   }
 
   emitTrackStuck(player: Player, thresholdMs: number): void {
-    log('warn', 'WS', `TrackStuck detected: guild=${player.guildId} threshold=${thresholdMs}ms`)
+    log('warn', 'WS', `⚠ TrackStuck | guild=${player.guildId} | threshold=${thresholdMs}ms`)
     this.sendToSession(player.sessionId, {
       op:          'event',
       type:        'TrackStuckEvent',
@@ -216,7 +216,7 @@ export class WebSocketManager {
           if (!player.state.connected && !player.track) {
             const idleMs = Date.now() - player.state.time
             if (idleMs >= zombieThresholdMs) {
-              log('info', 'WS', `Zombie player removed: guild=${player.guildId} idleMs=${idleMs}`)
+              log('warn', 'WS', `🧟 Zombie player removed | guild=${player.guildId} | idleMs=${idleMs}`)
               this.sm.deletePlayer(session.sessionId, player.guildId)
             }
           }

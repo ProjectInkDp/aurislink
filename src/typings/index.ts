@@ -80,6 +80,13 @@ export interface FiltersConfig {
   reverb?:     { mix?: number; roomSize?: number; damping?: number } | null      // AurisLink exclusive
 }
 
+export interface RoutePlannerConfig {
+  enabled: boolean
+  ipPool: string[]                          // list of outbound IPs to rotate
+  strategy?: 'RotateOnBan' | 'LoadBalance' | 'NanoSwitch'
+  cooldownMs?: number                       // how long a banned IP stays blocked (default: 600000)
+}
+
 export interface AurisConfig {
   server: ServerConfig
 
@@ -107,6 +114,9 @@ export interface AurisConfig {
 
   // ─── Default audio filters ─────────────────────────────────────────────────
   filters?: FiltersConfig
+
+  // ─── Route planner ────────────────────────────────────────────────────────
+  routePlanner?: RoutePlannerConfig
 
   // ─── Sources ───────────────────────────────────────────────────────────────
   sources: {

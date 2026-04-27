@@ -9,12 +9,24 @@ import { log } from './utils/logger.js'
 import { createRouter } from './api/router.js'
 import { SessionManager } from './core/SessionManager.js'
 import { WebSocketManager } from './core/WebSocketManager.js'
+import { RoutePlanner } from './core/RoutePlanner.js'
 
 export async function createServer(config: AurisConfig, sources: Map<string, Source>) {
   const sm  = new SessionManager()
   const wsm = new WebSocketManager(config, sm)
 
-  const router = createRouter(config, sources, sm, wsm)
+  // Boot route planner if configured
+  const rp = config.routePlanner?.enabled && config.routePlanner.ipPool.length > 0
+    ? new RoutePlanner({
+        ipPool:     config.routePlanner.ipPool,
+        strategy:   config.routePlanner.strategy,
+        cooldownMs: config.routePlanner.cooldownMs,
+      })
+    : null
+
+  if (rp) log('info', 'RoutePlanner', `Active — ${rp.ipPool.length} IP(s) — strategy: ${rp.strategy}`)
+
+  const router = createRouter(config, sources, sm, wsm, rp)
 
   const handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
     router(req, res).catch(err => {

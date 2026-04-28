@@ -170,9 +170,8 @@ const normalizeLang = (lang?: string): string | null => {
 const buildTranslationUrl = (
   entry: LetrasTranslationLanguageEntry
 ): string | null => {
-  if (!entry?.url?.artist || !entry?.url?.song || !entry?.url?.translation) {
-    return null
-  }
+  if (!entry?.url || typeof entry.url === 'string') return null
+  if (!entry.url.artist || !entry.url.song || !entry.url.translation) return null
   return `https://www.letras.mus.br/${entry.url.artist}/${entry.url.song}/${entry.url.translation}`
 }
 
@@ -346,9 +345,13 @@ export default class LetrasMusLyrics {
         const translations = extractTranslationLanguages(html)
         const entry =
           translations.find(
-            (item) =>
-              normalizeLang(item.languageCode) === requestedLang ||
-              (item.languageCode || '').toLowerCase().startsWith(requestedLang)
+            (item) => {
+              const code = item.languageCode ?? item.lang
+              return (
+                normalizeLang(code) === requestedLang ||
+                (code || '').toLowerCase().startsWith(requestedLang)
+              )
+            }
           ) || null
 
         const translationUrl = entry ? buildTranslationUrl(entry) : null

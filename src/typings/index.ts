@@ -199,9 +199,14 @@ export interface LyricsLine {
 }
 
 export interface LyricsData {
-  name:   string
-  synced: boolean
-  lines:  LyricsLine[]
+  name:      string
+  synced:    boolean
+  lines:     LyricsLine[]
+  language?: {
+    requested: string | null
+    resolved:  string | null
+    type:      string
+  }
 }
 
 export type LyricsResult =
@@ -354,6 +359,7 @@ export interface LetrasOmqLyricPayload {
   ID?:           number | string
   YoutubeID?:    string
   SongLanguage?: string
+  Name?:         string
 }
 
 export interface LetrasSolrDoc {
@@ -361,6 +367,8 @@ export interface LetrasSolrDoc {
   dns?:    string
   art?:    string
   mus?:    string
+  t?:      string   // doc type ('2' = track)
+  txt?:    string   // track title
 }
 
 export interface LetrasSolrResponse {
@@ -371,15 +379,20 @@ export interface LetrasSubtitleApiResponse {
   start_time?: number
   end_time?:   number
   text?:       string
+  status?:     string
+  Original?: {
+    Subtitle?: string
+  }
 }
 
-export interface LetrasSubtitleRawEntry {
-  startMs?: number
-  endMs?:   number
-  words?:   string
-}
+export type LetrasSubtitleRawEntry = [string, string, string, ...unknown[]]
 
 export interface LetrasTranslationLanguageEntry {
-  lang?: string
-  url?:  string
+  lang?:         string
+  languageCode?: string
+  url?: string | {
+    artist?:      string
+    song?:        string
+    translation?: string
+  }
 }

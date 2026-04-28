@@ -641,7 +641,7 @@ export default class MusixmatchLyrics {
     })) as MxmSearchBody
     if (!body?.track_list) return null
 
-    const tracks = body.track_list.map((item: MxmTrackItem) => {
+    const tracks = body.track_list.map((item: { track?: MxmTrackItem }) => {
       const track = item.track
       const tTitle = track?.track_name?.toLowerCase() ?? ''
       const tArtist = track?.artist_name?.toLowerCase() ?? ''

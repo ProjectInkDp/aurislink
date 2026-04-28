@@ -27,7 +27,7 @@ export class LyricsManager {
       new LRCLIBLyrics({}),
       new GeniusLyrics({}),
       new DeezerLyrics({}),
-      new MusixmatchLyrics({ options: {} }),
+      new MusixmatchLyrics({ options: {}, credentialManager: { get: () => null, set: () => {} } }),
       new LetrasMusLyrics({}),
     ]
 

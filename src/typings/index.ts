@@ -275,16 +275,15 @@ export interface AurisPlugin {
 
 // ─── Musixmatch internal types ────────────────────────────────────────────────
 
-export interface CacheEntry {
-  result:    LyricsResult
-  expiresAt: number
+export interface CacheEntry<T = LyricsResult> {
+  value:   T
+  expires: number
 }
 
 export interface FetchedLyrics {
-  trackId:   number
-  subtitleId?: number
-  lyrics?:   string
-  subtitle?: string
+  subtitles: LyricsLine[] | null
+  lyrics:    string | null
+  track:     MxmTrack | MxmTrackItem | Record<string, unknown>
 }
 
 export interface FormattedLyrics {
@@ -307,6 +306,7 @@ export interface MxmParsedSubtitleItem {
 }
 
 export interface MxmSearchBody {
+  track_list?: Array<{ track?: MxmTrackItem }>
   message?: {
     body?: {
       track_list?: Array<{ track?: MxmTrackItem }>
@@ -329,10 +329,22 @@ export interface MxmTrackItem {
   has_lyrics?:     number
   has_subtitles?:  number
   num_favourite?:  number
+  track_rating?:   number
 }
 
 export interface AurisInstanceForMusixmatch {
-  options: Record<string, unknown>
+  options: {
+    lyrics?: {
+      musixmatch?: {
+        signatureSecret?: string
+      }
+    }
+    [key: string]: unknown
+  }
+  credentialManager: {
+    get(key: string): TokenData | null
+    set(key: string, value: TokenData, ttl: number): void
+  }
 }
 
 export interface ScoredTrack {
@@ -341,16 +353,17 @@ export interface ScoredTrack {
 }
 
 export interface TokenData {
-  token:     string
-  expiresAt: number
+  value:   string
+  expires: number
 }
 
 // ─── Letras.mus.br internal types ─────────────────────────────────────────────
 
 export interface LetrasLyricsTrackInfo {
-  title:  string
-  author: string
-  uri?:   string | null
+  title:       string
+  author:      string
+  uri?:        string | null
+  sourceName?: string
 }
 
 export type LetrasMusLyricsResult = LyricsResult
@@ -373,6 +386,9 @@ export interface LetrasSolrDoc {
 
 export interface LetrasSolrResponse {
   docs?: LetrasSolrDoc[]
+  response?: {
+    docs?: LetrasSolrDoc[]
+  }
 }
 
 export interface LetrasSubtitleApiResponse {

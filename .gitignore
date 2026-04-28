@@ -1,0 +1,31 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Config (may contain secrets)
+config.ts
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Lock files — not committed
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Backup folders
+aurislink-final/
+aurislink-v1_2_1/
+data/
+
+# Zip releases
+*.zip

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.log
+logs/
+.env
+.env.local
+config.ts
+.git
+.gitignore
+README.md

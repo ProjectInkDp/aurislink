@@ -38,7 +38,7 @@ export async function createServer(
   if (rp) log('info', 'RoutePlanner', `Active — ${rp.ipPool.length} IP(s) — strategy: ${rp.strategy}`)
 
   const dos = config.dosProtection?.enabled !== false
-    ? new DosProtectionManager({ options: { dosProtection: config.dosProtection } })
+    ? new DosProtectionManager({ options: { dosProtection: config.dosProtection as any } })
     : null
 
   if (dos) log('info', 'DosProtection', 'Active')

@@ -301,8 +301,8 @@ export interface MxmMacroBody {
 }
 
 export interface MxmParsedSubtitleItem {
-  text:      string
-  time:      { total: number }
+  text: string
+  time: { total: number; duration?: number }
 }
 
 export interface MxmSearchBody {

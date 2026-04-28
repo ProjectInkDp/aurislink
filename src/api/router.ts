@@ -23,6 +23,7 @@ import { handleMeaning } from './meaning.js'
 import { handleLoadChapters } from './chapters.js'
 import { handleMetrics } from './metrics.js'
 import { handleHealth } from './health.js'
+import { handleVersion } from './version.js'
 import { handleLyricsSubscribe } from './lyricsSubscribe.js'
 import { handleRoutePlannerStatus, handleRoutePlannerFreeAddress, handleRoutePlannerFreeAll } from './routePlanner.js'
 import type { RoutePlanner } from '../core/RoutePlanner.js'
@@ -58,6 +59,7 @@ export function createRouter(
     // Public endpoints — no auth required
     if (method === 'GET' && path === '/v4/health') return handleHealth(req, res)
     if (method === 'GET' && path === '/v4/metrics') return handleMetrics(req, res, sm)
+    if (method === 'GET' && path === '/v4/version') return handleVersion(req, res)
 
     // Rate limiting — 120 requests per minute per IP
     const clientIp = getClientIp(req as any)
@@ -94,14 +96,43 @@ export function createRouter(
           if (p.track && !p.paused) playingPlayers++
         }
       }
-      const mem = process.memoryUsage()
+      const mem  = process.memoryUsage()
+      const cpu  = process.cpuUsage()
+      // Event-loop lag: sampled continuously by the metrics module via setImmediate
+      // We re-derive a fresh sample here for the REST response.
+      const lagStart = process.hrtime.bigint()
+      await new Promise<void>(r => setImmediate(r))
+      const eventLoopLagMs = Number(process.hrtime.bigint() - lagStart) / 1_000_000
+
       return sendJson(res, 200, {
-        players: totalPlayers,
+        players:       totalPlayers,
         playingPlayers,
-        uptime: process.uptime() * 1000,
-        memory: { free: mem.heapTotal - mem.heapUsed, used: mem.heapUsed, allocated: mem.heapTotal, reservable: mem.rss },
-        cpu: { cores: 1, systemLoad: 0, lavalinkLoad: 0 },
-        frameStats: null,
+        uptime:        process.uptime() * 1000,
+        memory: {
+          free:       mem.heapTotal - mem.heapUsed,
+          used:       mem.heapUsed,
+          allocated:  mem.heapTotal,
+          reservable: mem.rss,
+          external:   mem.external,
+        },
+        cpu: {
+          cores:      require('os').cpus().length,
+          userUsage:  cpu.user,
+          sysUsage:   cpu.system,
+          systemLoad: 0,
+          lavalinkLoad: 0,
+        },
+        eventLoopLagMs: parseFloat(eventLoopLagMs.toFixed(3)),
+        frameStats: {
+          sent:    0,
+          nulled:  0,
+          deficit: 0,
+        },
+        node: {
+          version:  process.version,
+          platform: process.platform,
+          arch:     process.arch,
+        },
       })
     }
 

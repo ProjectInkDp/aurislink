@@ -136,6 +136,18 @@ export interface AurisConfig {
   // ─── Route planner ────────────────────────────────────────────────────────
   routePlanner?: RoutePlannerConfig
 
+  // ─── Lyrics providers ─────────────────────────────────────────────────────
+  lyrics?: {
+    yandexmusic?: {
+      /**
+       * Yandex Music OAuth2 access token.
+       * Obtain one at https://oauth.yandex.com — use scope `login:info music:read`.
+       * When omitted, the provider is skipped silently.
+       */
+      accessToken?: string
+    }
+  }
+
   // ─── Sources ───────────────────────────────────────────────────────────────
   sources: {
     soundcloud: {

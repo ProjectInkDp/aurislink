@@ -94,7 +94,7 @@ if (config.sources.spotify?.enabled) {
 }
 
 const lyricsManager = new LyricsManager()
-await lyricsManager.setup()
+await lyricsManager.setup(config, tokenStore)
 
 const server = await createServer(config, sources, lyricsManager, trackCache, tokenStore)
 

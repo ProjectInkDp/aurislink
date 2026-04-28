@@ -396,14 +396,9 @@ export default class GeniusLyrics {
       )
 
       if (!searchResponse || searchResponse.status !== 200) {
-        throw new Error(!searchResponse)
+        throw new Error('Genius search request failed or returned non-200')
       }
 
-      if (searchResponse.status !== 200) {
-        throw new Error(
-          `Unexpected Genius search status code: ${searchResponse.status}`
-        )
-      }
 
       const songPath = this.extractSearchHitPath(
         searchResponse.body as
@@ -426,14 +421,8 @@ export default class GeniusLyrics {
         }
       )
 
-      if (songPageResponse.error) {
-        throw new Error(songPageResponse.error)
-      }
-
-      if (songPageResponse.status !== 200) {
-        throw new Error(
-          `Unexpected Genius page status code: ${songPageResponse.status}`
-        )
+      if (!songPageResponse || songPageResponse.status !== 200) {
+        throw new Error(`Genius page request failed — status: ${songPageResponse?.status ?? 'null'}`)
       }
 
       const songPageHtml =

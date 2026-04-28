@@ -3,25 +3,31 @@
 import type http from 'node:http'
 import { sendJson } from './helpers.js'
 
+const AURIS_VERSION = '1.5.0'
+const [MAJOR, MINOR, PATCH] = AURIS_VERSION.split('.').map(Number)
+
 const INFO = {
   version: {
-    semver: '1.1.0',
-    major: 1,
-    minor: 1,
-    patch: 0,
+    semver:     AURIS_VERSION,
+    major:      MAJOR,
+    minor:      MINOR,
+    patch:      PATCH,
     preRelease: null,
-    build: null,
+    build:      null,
   },
-  buildTime: Date.now(),
+  buildTime:      Date.now(),
   git: {
-    branch: 'v1',
-    commit: 'unknown',
+    branch:     'v1',
+    commit:     'unknown',
     commitTime: 0,
   },
-  jvm: null,
-  lavaplayer: null,
-  sourceManagers: ['soundcloud', 'deezer'],
-  filters: ['equalizer', 'karaoke', 'timescale', 'tremolo', 'vibrato', 'rotation', 'distortion', 'channelMix', 'lowPass', 'volume'],
+  jvm:         null,
+  lavaplayer:  null,
+  sourceManagers: ['soundcloud', 'deezer', 'jiosaavn', 'spotify'],
+  filters: [
+    'equalizer', 'timescale', 'tremolo', 'vibrato',
+    'rotation', 'channelMix', 'lowPass', 'echo', 'reverb', 'volume',
+  ],
   plugins: [],
 }
 

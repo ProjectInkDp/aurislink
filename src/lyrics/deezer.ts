@@ -263,9 +263,9 @@ fragment SynchronizedLines on Lyrics {
       } else if (lyrics.synchronizedLines?.length) {
         synced = true
         lines = lyrics.synchronizedLines.map((line) => ({
-          time: line.milliseconds,
-          duration: line.duration,
-          text: line.line
+          time:     Number(line.milliseconds),
+          duration: Number(line.duration),
+          text:     String(line.line),
         }))
       } else if (lyrics.text) {
         lines = lyrics.text

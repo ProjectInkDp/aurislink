@@ -70,17 +70,50 @@ const config: AurisConfig = {
     reverb: null,             // { mix: 0.3, roomSize: 0.5, damping: 0.5 } — AurisLink exclusive | null = off
   },
 
-  // ─── Sources ───────────────────────────────────────────────────────────────
   // ─── Route planner ────────────────────────────────────────────────────────
-  // Rotates outbound IPs when one gets rate-limited.
+  // Rotates outbound IPs when one gets rate-limited or banned.
   // Leave ipPool empty to disable.
   routePlanner: {
     enabled: false,
     ipPool: [],                   // e.g. ["1.2.3.4", "1.2.3.5"]
     strategy: 'RotateOnBan',      // RotateOnBan | LoadBalance | NanoSwitch
-    cooldownMs: 600_000,          // 10 minutes
+    cooldownMs: 600_000,          // 10 minutes — how long a banned IP stays blocked
   },
 
+  // ─── DoS protection ───────────────────────────────────────────────────────
+  // Sliding-window per-IP rate limiter applied before routing.
+  // Tune thresholds to match your expected traffic.
+  dosProtection: {
+    enabled: false,
+    thresholds: {
+      burstRequests: 100,     // max requests per window per IP
+      timeWindowMs:  10_000,  // sliding window size (ms)
+      warnRatio:     0.8,     // log a warning when this ratio of the limit is reached
+      maxEntries:    10_000,  // max number of tracked IPs before LRU eviction
+    },
+    mitigation: {
+      delayMs:            500,      // delay added to requests that exceed the warn ratio
+      blockDurationMs:    30_000,   // block duration when hard limit is exceeded
+      backoffMultiplier:  2,        // multiply blockDurationMs on repeated violations
+      maxBlockDurationMs: 600_000,  // cap on backoff block duration (10 min)
+    },
+    ignore: {
+      ips:   [],   // IPs exempt from DoS checks (e.g. your own bot host)
+      paths: [],   // URL paths exempt (e.g. ['/v4/health'])
+    },
+    trustProxy: false,  // set true if AurisLink is behind a reverse proxy (uses X-Forwarded-For)
+  },
+
+  // ─── Lyrics providers ─────────────────────────────────────────────────────
+  lyrics: {
+    // Providers tried in order: LRCLib → Genius → Deezer → Musixmatch → Letras.mus.br → Yandex Music
+    yandexmusic: {
+      accessToken: '',  // Yandex Music OAuth2 token (optional — provider skipped if empty)
+      // Obtain at https://oauth.yandex.com — scope: login:info music:read
+    },
+  },
+
+  // ─── Sources ───────────────────────────────────────────────────────────────
   sources: {
 
     soundcloud: {

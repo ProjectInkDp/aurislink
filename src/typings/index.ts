@@ -136,6 +136,9 @@ export interface AurisConfig {
   // ─── Route planner ────────────────────────────────────────────────────────
   routePlanner?: RoutePlannerConfig
 
+  // ─── DoS protection ───────────────────────────────────────────────────────
+  dosProtection?: AurisDosConfig
+
   // ─── Lyrics providers ─────────────────────────────────────────────────────
   lyrics?: {
     yandexmusic?: {
@@ -256,4 +259,127 @@ export interface ApiRequest {
   url?:    string
   socket?: { remoteAddress?: string }
   headers: Record<string, string | string[] | undefined>
+}
+
+// ─── Plugin system ────────────────────────────────────────────────────────────
+
+export interface AurisPlugin {
+  name:    string
+  version: string
+}
+
+// ─── Musixmatch internal types ────────────────────────────────────────────────
+
+export interface CacheEntry {
+  result:    LyricsResult
+  expiresAt: number
+}
+
+export interface FetchedLyrics {
+  trackId:   number
+  subtitleId?: number
+  lyrics?:   string
+  subtitle?: string
+}
+
+export interface FormattedLyrics {
+  name?:  string
+  synced: boolean
+  lines:  LyricsLine[]
+}
+
+export interface MxmMacroBody {
+  macro_calls?: {
+    'matcher.track.get'?: { message?: { body?: { track?: MxmTrack } } }
+    'track.lyrics.get'?:  { message?: { body?: { lyrics?: { lyrics_body?: string } } } }
+    'track.subtitles.get'?: { message?: { body?: { subtitle_list?: Array<{ subtitle?: { subtitle_id?: number; subtitle_body?: string } }> } } }
+  }
+}
+
+export interface MxmParsedSubtitleItem {
+  text:      string
+  time:      { total: number }
+}
+
+export interface MxmSearchBody {
+  message?: {
+    body?: {
+      track_list?: Array<{ track?: MxmTrackItem }>
+    }
+  }
+}
+
+export interface MxmTrack {
+  track_id?:       number
+  track_name?:     string
+  artist_name?:    string
+  has_lyrics?:     number
+  has_subtitles?:  number
+}
+
+export interface MxmTrackItem {
+  track_id?:       number
+  track_name?:     string
+  artist_name?:    string
+  has_lyrics?:     number
+  has_subtitles?:  number
+  num_favourite?:  number
+}
+
+export interface AurisInstanceForMusixmatch {
+  options: Record<string, unknown>
+}
+
+export interface ScoredTrack {
+  track: MxmTrackItem
+  score: number
+}
+
+export interface TokenData {
+  token:     string
+  expiresAt: number
+}
+
+// ─── Letras.mus.br internal types ─────────────────────────────────────────────
+
+export interface LetrasLyricsTrackInfo {
+  title:  string
+  author: string
+  uri?:   string | null
+}
+
+export type LetrasMusLyricsResult = LyricsResult
+
+export interface LetrasOmqLyricPayload {
+  ID?:           number | string
+  YoutubeID?:    string
+  SongLanguage?: string
+}
+
+export interface LetrasSolrDoc {
+  url?:    string
+  dns?:    string
+  art?:    string
+  mus?:    string
+}
+
+export interface LetrasSolrResponse {
+  docs?: LetrasSolrDoc[]
+}
+
+export interface LetrasSubtitleApiResponse {
+  start_time?: number
+  end_time?:   number
+  text?:       string
+}
+
+export interface LetrasSubtitleRawEntry {
+  startMs?: number
+  endMs?:   number
+  words?:   string
+}
+
+export interface LetrasTranslationLanguageEntry {
+  lang?: string
+  url?:  string
 }

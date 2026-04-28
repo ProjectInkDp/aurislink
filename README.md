@@ -3,7 +3,7 @@
   <h1>AurisLink</h1>
   <p>A lightweight, Lavalink v4-compatible audio server written in TypeScript / Node.js.</p>
 
-  ![version](https://img.shields.io/badge/version-1.5.0-a78bfa?style=flat-square) ![node](https://img.shields.io/badge/node-20+-339933?style=flat-square&logo=node.js&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)
+  ![version](https://img.shields.io/badge/version-1.6.0-a78bfa?style=flat-square) ![node](https://img.shields.io/badge/node-20+-339933?style=flat-square&logo=node.js&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 </div>
 
 AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.dev/api/rest), so any existing Lavalink client (Shoukaku, Lavalink.js, Magmastream, etc.) connects without changes.
@@ -19,7 +19,7 @@ AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.de
 - **Deezer** — search, metadata, and full 320kbps streams with ARL + Blowfish decryption
 - **JioSaavn** — search, resolve, 320kbps stream with DES/ECB decryption and proxy support
 - **Spotify** — anonymous TOTP auth (no credentials needed), OAuth2, custom token endpoint, recommendations (`sprec:`), ISRC-first stream resolution, album/playlist/artist loading
-- **Lyrics** — synced + plain text, SSE real-time stream
+- **Lyrics** — synced + plain text, SSE real-time stream; providers: LRCLib, Genius, Deezer, Musixmatch, Letras.mus.br, Yandex Music
 - **Track meaning** — bio, tags, year, listener count via Wikipedia + MusicBrainz + Last.fm
 - **Audio filters** — equalizer, timescale, tremolo, vibrato, rotation, channelMix, lowPass, echo, reverb
 - **HTTP/2** — with TLS and HTTP/1.1 fallback
@@ -27,6 +27,7 @@ AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.de
 - **Prometheus metrics** at `/v4/metrics`
 - **Health check** at `/v4/health`
 - **IP Route Planner** — RotateOnBan, LoadBalance, NanoSwitch strategies
+- **Per-IP DoS protection** — sliding-window rate limiter with backoff, block, and proxy trust support
 - **Per-IP rate limiting** — sliding window per client
 - **Source worker** — search/load runs in an isolated process, keeping the audio loop clean
 - **Graceful shutdown** — clean session teardown on SIGINT/SIGTERM
@@ -187,6 +188,12 @@ Copy `config.default.ts` → `config.ts` and edit:
 | `routePlanner.ipPool` | `[]` | List of outbound IPs to rotate between |
 | `routePlanner.strategy` | `RotateOnBan` | `RotateOnBan` \| `LoadBalance` \| `NanoSwitch` |
 | `routePlanner.cooldownMs` | `600000` | How long a banned IP stays blocked (ms) |
+| `dosProtection.enabled` | `false` | Enable per-IP DoS protection |
+| `dosProtection.thresholds.burstRequests` | `100` | Max requests per window per IP |
+| `dosProtection.thresholds.timeWindowMs` | `10000` | Sliding window size (ms) |
+| `dosProtection.mitigation.blockDurationMs` | `30000` | Block duration on hard limit violation |
+| `dosProtection.trustProxy` | `false` | Trust `X-Forwarded-For` (set true behind a reverse proxy) |
+| `lyrics.yandexmusic.accessToken` | `""` | Yandex Music OAuth2 token (enables Yandex lyrics provider) |
 
 ### Deezer setup
 
@@ -320,6 +327,17 @@ Client-Name: <your client name>
 | JioSaavn | ✅ Ready | `jssearch:` | DES/ECB stream decryption, proxy support, 320kbps |
 | Spotify | ✅ Ready | `spsearch:` `sprec:` | Anonymous TOTP or OAuth2. Recommendations, ISRC-first resolve. Streams delegated to SoundCloud/Deezer |
 | YouTube | 🔜 Planned | `ytsearch:` | — |
+
+### Lyrics providers
+
+| Provider | Notes |
+|---|---|
+| LRCLib | Free, synced LRC lyrics, no credentials needed |
+| Genius | Plain-text lyrics, no credentials needed |
+| Deezer | Synced lyrics (requires Deezer source enabled) |
+| Musixmatch | Word-level synced lyrics via public API |
+| Letras.mus.br | PT-BR focused lyrics provider with subtitle sync |
+| Yandex Music | Synced lyrics via OAuth2 token (optional) |
 
 ---
 

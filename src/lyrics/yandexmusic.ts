@@ -99,7 +99,8 @@ export default class YandexMusicLyrics {
    * 1. Search Yandex Music for the track to get its numeric ID.
    * 2. Fetch synced (or plain) lyrics using that ID.
    */
-  async getLyrics(title: string, artist: string): Promise<LyricsResult> {
+  async getLyrics(trackInfo: { title: string; author: string }): Promise<LyricsResult> {
+    const { title, author: artist } = trackInfo
     if (!this.accessToken) {
       return { loadType: 'error', data: { message: 'Yandex Music token not configured', severity: 'common' } }
     }

@@ -469,7 +469,7 @@ export default class LRCLIBLyrics {
       )
 
       if (!response) {
-        throw new Error(!response)
+        throw new Error('LRCLIB request failed')
       }
 
       if (response.status !== 200) {

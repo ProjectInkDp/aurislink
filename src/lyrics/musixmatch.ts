@@ -351,7 +351,7 @@ export default class MusixmatchLyrics {
 
   private async _fetchToken(): Promise<string> {
     const url = _buildUrl(ENDPOINTS.TOKEN, { app_id: APP_ID })
-    const { statusCode, headers, body } = await httpGet(url, {
+    const res = await httpGet(url, {
       method: 'GET',
       headers: {
         accept: '*/*',
@@ -360,6 +360,11 @@ export default class MusixmatchLyrics {
         'user-agent': DEFAULT_UA
       }
     })
+    const { statusCode, headers, body } = {
+      statusCode: res?.status ?? 0,
+      headers: res?.headers ?? {},
+      body: res?.body ?? ''
+    }
 
     if (headers?.['set-cookie']) {
       this._parseCookies(headers['set-cookie'])
@@ -488,7 +493,7 @@ export default class MusixmatchLyrics {
 
     if (this.useManualToken) url = this._signUrl(url)
 
-    const { statusCode, headers, body } = await httpGet(url, {
+    const mainRes = await httpGet(url, {
       method: 'GET',
       headers: {
         accept: 'application/json',
@@ -496,6 +501,11 @@ export default class MusixmatchLyrics {
         cookie: this._getCookies()
       }
     })
+    const { statusCode, headers, body } = {
+      statusCode: mainRes?.status ?? 0,
+      headers: mainRes?.headers ?? {},
+      body: mainRes?.body ?? ''
+    }
 
     if (!this.useManualToken && headers?.['set-cookie']) {
       this._parseCookies(headers['set-cookie'])
@@ -517,11 +527,7 @@ export default class MusixmatchLyrics {
           guid: this.guid
         })
 
-        const {
-          statusCode: retryStatus,
-          headers: retryHeaders,
-          body: retryBody
-        } = await httpGet(retryUrl, {
+        const retryRes = await httpGet(retryUrl, {
           method: 'GET',
           headers: {
             accept: 'application/json',
@@ -529,6 +535,15 @@ export default class MusixmatchLyrics {
             cookie: this._getCookies()
           }
         })
+        const {
+          statusCode: retryStatus,
+          headers: retryHeaders,
+          body: retryBody
+        } = {
+          statusCode: retryRes?.status ?? 0,
+          headers: retryRes?.headers ?? {},
+          body: retryRes?.body ?? ''
+        }
 
         if (retryHeaders?.['set-cookie']) {
           this._parseCookies(retryHeaders['set-cookie'])
@@ -822,10 +837,9 @@ export default class MusixmatchLyrics {
       const result: LyricsResult = {
         loadType: 'lyrics',
         data: {
-          name: formatted.name,
+          name: formatted.name ?? `${found.track?.track_name ?? ''} — ${found.track?.artist_name ?? ''}`.trim(),
           synced: formatted.synced,
           lines: formatted.lines,
-          provider: 'musixmatch'
         }
       }
 

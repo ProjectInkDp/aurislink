@@ -297,7 +297,7 @@ export class AurisSpotifySource implements Source {
       // Official API fallback
       let next: string | null = `/albums/${id}?market=${this.market}`
       while (next && tracks.length < this.albumLimit) {
-        const res = await this._apiGet<SpotifyApiAlbum>(next, accessToken)
+        const res: SpotifyApiAlbum | null = await this._apiGet<SpotifyApiAlbum>(next, accessToken)
         if (!res) break
         if (!tracks.length) name = res.name
         for (const it of res.tracks.items) {
@@ -346,7 +346,7 @@ export class AurisSpotifySource implements Source {
       // Official API fallback
       let next: string | null = `/playlists/${id}?market=${this.market}`
       while (next && tracks.length < this.playlistLimit) {
-        const res = await this._apiGet<SpotifyApiPlaylist>(next, accessToken)
+        const res: SpotifyApiPlaylist | null = await this._apiGet<SpotifyApiPlaylist>(next, accessToken)
         if (!res) break
         if (!tracks.length) name = res.name
         for (const it of res.tracks.items) {

@@ -67,7 +67,7 @@ export class WorkerClient {
       if (!this.child) return reject(new Error('Worker not running'))
       const id = String(++this.counter)
       this.pending.set(id, { resolve, reject })
-      this.child.send({ ...req, id } satisfies WorkerRequest)
+      this.child.send({ ...req, id } as WorkerRequest)
       // Timeout after 15 s
       setTimeout(() => {
         if (this.pending.has(id)) {
@@ -105,7 +105,7 @@ export async function runWorkerProcess(): Promise<void> {
   const { SoundCloudSource } = await import('./sources/soundcloud.js')
   const { DeezerSource }     = await import('./sources/deezer.js')
   const { JioSaavnSource }   = await import('./sources/jiosaavn.js')
-  const { SpotifySource }    = await import('./sources/spotify.js')
+  const { AurisSpotifySource }    = await import('./sources/spotify.js')
 
   const sources = new Map<string, Source>()
 
@@ -122,7 +122,7 @@ export async function runWorkerProcess(): Promise<void> {
     if (await js.setup()) sources.set('jiosaavn', js)
   }
   if (config.sources.spotify?.enabled) {
-    const sp = new SpotifySource(config)
+    const sp = new AurisSpotifySource(config)
     if (await sp.setup()) sources.set('spotify', sp)
   }
 

@@ -283,11 +283,9 @@ export default class LetrasMusLyrics {
    * @internal
    */
   private async _fetchHtml(url: string): Promise<string | null> {
-    const { body, statusCode, error } = await httpGet(url, {
-      method: 'GET'
-    })
-    if (error || statusCode !== 200 || !body) return null
-    return typeof body === 'string' ? body : String(body)
+    const res = await httpGet(url, { method: 'GET' })
+    if (!res || res.status !== 200 || !res.body) return null
+    return res.body
   }
 
   /**
@@ -305,11 +303,10 @@ export default class LetrasMusLyrics {
 
     const query = `${trackInfo.title} ${trackInfo.author}`.trim()
     const url = `${SOLR_ENDPOINT}?q=${encodeURIComponent(query)}&wt=json&callback=LetrasSug`
-    const { body, statusCode, error } = await httpGet(url, {
-      method: 'GET'
-    })
-    if (error || statusCode !== 200 || !body || typeof body !== 'string')
+    const solrRes = await httpGet(url, { method: 'GET' })
+    if (!solrRes || solrRes.status !== 200 || !solrRes.body)
       return null
+    const body = solrRes.body
 
     const parsed = parseJsonp(body)
     const docs = parsed?.response?.docs || []
@@ -329,7 +326,7 @@ export default class LetrasMusLyrics {
    * @returns Lyrics payload, empty result, or provider error.
    */
   public async getLyrics(
-    trackInfo: LetrasLyricsTrackInfo,
+    trackInfo: LetrasLyricsTrackInfo & { sourceName?: string },
     language?: string
   ): Promise<LetrasMusLyricsResult> {
     try {
@@ -386,9 +383,8 @@ export default class LetrasMusLyrics {
 
       if (letrasId && youtubeId) {
         const apiUrl = `https://www.letras.mus.br/api/v2/subtitle/${letrasId}/${youtubeId}/`
-        const { body: apiBody, statusCode } = await httpGet(apiUrl, {
-          method: 'GET'
-        })
+        const apiRes = await httpGet(apiUrl, { method: 'GET' })
+        const apiBody = apiRes?.body
 
         const parsedApiBody =
           typeof apiBody === 'string'
@@ -396,7 +392,7 @@ export default class LetrasMusLyrics {
             : (apiBody as LetrasSubtitleApiResponse | undefined)
 
         if (
-          statusCode === 200 &&
+          apiRes?.status === 200 &&
           parsedApiBody?.status !== 'not found' &&
           parsedApiBody?.Original?.Subtitle
         ) {

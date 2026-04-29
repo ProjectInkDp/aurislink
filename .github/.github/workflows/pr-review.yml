@@ -1,0 +1,63 @@
+name: PR Review (Auris Assistant)
+
+on:
+  pull_request:
+    types: [opened]
+    branches: [dev]
+
+jobs:
+  review:
+    name: Auris Assistant Review
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: diff
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD > diff.txt
+          echo "size=$(wc -c < diff.txt)" >> $GITHUB_OUTPUT
+
+      - name: Review with Groq
+        if: steps.diff.outputs.size != '0'
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          DIFF=$(head -c 12000 diff.txt)
+
+          SYSTEM="You are Auris Assistant, a code reviewer for AurisLink — a Lavalink v4-compatible audio server written in TypeScript/Node.js. Review the PR diff and provide concise, useful feedback. Focus on: bugs, breaking changes to the Lavalink v4 protocol, missing error handling, and code quality. Be direct and friendly. Use markdown. If the code looks good, say so."
+
+          PAYLOAD=$(jq -n \
+            --arg system "$SYSTEM" \
+            --arg diff "$DIFF" \
+            '{
+              model: "llama-3.3-70b-versatile",
+              max_tokens: 1024,
+              messages: [
+                { role: "system", content: $system },
+                { role: "user", content: ("Review this PR diff:\n\n```diff\n" + $diff + "\n```") }
+              ]
+            }')
+
+          RESPONSE=$(curl -s https://api.groq.com/openai/v1/chat/completions \
+            -H "Authorization: Bearer $GROQ_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+
+          COMMENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Could not generate review."')
+
+          BODY=$(jq -n --arg comment "$COMMENT" '{ body: ("## 🎵 Auris Assistant Review\n\n" + $comment) }')
+
+          curl -s -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments"

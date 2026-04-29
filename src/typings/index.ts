@@ -205,9 +205,10 @@ export interface LyricsLine {
 }
 
 export interface LyricsData {
-  name:   string
-  synced: boolean
-  lines:  LyricsLine[]
+  name:      string
+  synced:    boolean
+  lines:     LyricsLine[]
+  language?: { requested: string | null; resolved: string | null; type?: string }
 }
 
 export type LyricsResult =
@@ -276,16 +277,18 @@ export interface AurisPlugin {
 
 // ─── Musixmatch internal types ────────────────────────────────────────────────
 
-export interface CacheEntry {
-  result:    LyricsResult
-  expiresAt: number
+export interface CacheEntry<T = LyricsResult> {
+  value:   T
+  expires: number
 }
 
 export interface FetchedLyrics {
-  trackId:   number
+  trackId?:   number
   subtitleId?: number
-  lyrics?:   string
-  subtitle?: string
+  lyrics?:    string | null
+  subtitle?:  string
+  subtitles?: LyricsLine[] | null
+  track?:     MxmTrackItem | Record<string, never>
 }
 
 export interface FormattedLyrics {
@@ -303,8 +306,8 @@ export interface MxmMacroBody {
 }
 
 export interface MxmParsedSubtitleItem {
-  text:      string
-  time:      { total: number }
+  text:  string
+  time:  { total: number; duration?: number }
 }
 
 export interface MxmSearchBody {
@@ -313,6 +316,7 @@ export interface MxmSearchBody {
       track_list?: Array<{ track?: MxmTrackItem }>
     }
   }
+  track_list?: Array<{ track?: MxmTrackItem }>
 }
 
 export interface MxmTrack {
@@ -330,10 +334,22 @@ export interface MxmTrackItem {
   has_lyrics?:     number
   has_subtitles?:  number
   num_favourite?:  number
+  track_rating?:   number
 }
 
 export interface AurisInstanceForMusixmatch {
-  options: Record<string, unknown>
+  options: {
+    lyrics?: {
+      musixmatch?: {
+        signatureSecret?: string
+      }
+    }
+    [key: string]: unknown
+  }
+  credentialManager: {
+    get(key: string): string | null
+    set(key: string, value: string, ttl?: number): void
+  }
 }
 
 export interface ScoredTrack {
@@ -342,16 +358,19 @@ export interface ScoredTrack {
 }
 
 export interface TokenData {
-  token:     string
-  expiresAt: number
+  value:   string
+  expires: number
+  token?:  string
+  expiresAt?: number
 }
 
 // ─── Letras.mus.br internal types ─────────────────────────────────────────────
 
 export interface LetrasLyricsTrackInfo {
-  title:  string
-  author: string
-  uri?:   string | null
+  title:       string
+  author:      string
+  uri?:        string | null
+  sourceName?: string
 }
 
 export type LetrasMusLyricsResult = LyricsResult
@@ -360,34 +379,37 @@ export interface LetrasOmqLyricPayload {
   ID?:           number | string
   YoutubeID?:    string
   SongLanguage?: string
+  Name?:         string
 }
 
 export interface LetrasSolrDoc {
-  url?:    string
+  url?:    { artist?: string; song?: string; translation?: string }
   dns?:    string
   art?:    string
   mus?:    string
+  t?:      string
+  txt?:    string
 }
 
 export interface LetrasSolrResponse {
-  docs?: LetrasSolrDoc[]
+  docs?:     LetrasSolrDoc[]
+  response?: { docs?: LetrasSolrDoc[] }
 }
 
 export interface LetrasSubtitleApiResponse {
   start_time?: number
   end_time?:   number
   text?:       string
+  status?:     string
+  Original?:   { Subtitle?: string }
 }
 
-export interface LetrasSubtitleRawEntry {
-  startMs?: number
-  endMs?:   number
-  words?:   string
-}
+export type LetrasSubtitleRawEntry = [string, string, string]
 
 export interface LetrasTranslationLanguageEntry {
-  lang?: string
-  url?:  string
+  lang?:         string
+  url?:          string
+  languageCode?: string
 }
 
 // ─── Cluster ──────────────────────────────────────────────────────────────────

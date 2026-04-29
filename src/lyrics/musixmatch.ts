@@ -250,7 +250,7 @@ export default class MusixmatchLyrics {
       const cachedToken =
         this.auris.credentialManager.get('musixmatch_token')
       if (cachedToken) {
-        this.tokenData = cachedToken
+        this.tokenData = { value: cachedToken, expires: Date.now() + TOKEN_TTL }
         log(
           'info',
           'Lyrics',
@@ -423,8 +423,7 @@ export default class MusixmatchLyrics {
     this.tokenData = { value: token, expires }
     this.auris.credentialManager.set(
       'musixmatch_token',
-      this.tokenData,
-      TOKEN_TTL
+      this.tokenData.value
     )
     this._saveToken(token, expires).catch(() => {})
     return token
@@ -584,7 +583,7 @@ export default class MusixmatchLyrics {
 
     return {
       subtitles: subtitles ? this._parseSubtitles(subtitles) : null,
-      lyrics: lyrics || null,
+      lyrics: lyrics ?? null,
       track: track || {}
     }
   }
@@ -618,7 +617,7 @@ export default class MusixmatchLyrics {
         const subtitleStr = subBody?.subtitle?.subtitle_body
         if (subtitleStr) {
           const subtitles = this._parseSubtitles(subtitleStr)
-          if (subtitles?.length) return { subtitles, lyrics: null, track }
+          if (subtitles?.length) return { subtitles: subtitles as unknown as LyricsLine[], lyrics: null, track }
         }
       } catch {}
     }
@@ -802,7 +801,7 @@ export default class MusixmatchLyrics {
           found = {
             subtitles:
               subtitles.status === 'fulfilled' ? subtitles.value : null,
-            lyrics: lyrics.status === 'fulfilled' ? lyrics.value : null,
+            lyrics: (lyrics.status === 'fulfilled' ? lyrics.value : null) ?? null,
             track
           }
         }
@@ -814,7 +813,7 @@ export default class MusixmatchLyrics {
         return result
       }
 
-      const formatted = this._format(found.lyrics, found.subtitles, found.track)
+      const formatted = this._format(found.lyrics ?? null, found.subtitles ?? null, (found.track as MxmTrack) ?? {})
 
       if (!formatted || !formatted.lines.length) {
         const result: LyricsResult = { loadType: 'empty', data: {} }

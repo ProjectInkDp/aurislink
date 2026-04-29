@@ -31,8 +31,25 @@ try {
 initLogger(config.logging)
 
 log('info', 'AurisLink', '─────────────────────────────────────')
-log('info', 'AurisLink', '  AurisLink v1.5.0 — starting up…')
+log('info', 'AurisLink', '  AurisLink v1.6.0 — starting up…')
 log('info', 'AurisLink', '─────────────────────────────────────')
+
+// ─── Cluster guard ──────────────────────────────────────────────────────────
+// Full multi-worker cluster is planned; for now the source worker (worker.ts)
+// is always a single forked process. Log the resolved state so operators know
+// what is active.
+if (config.cluster?.enabled) {
+  const workers = config.cluster.workers === 0
+    ? '(auto — os.cpus().length)'
+    : String(config.cluster.workers)
+  log('info', 'AurisLink', `Cluster enabled — source workers: ${workers}`)
+  log('info', 'AurisLink', `  commandTimeout=${config.cluster.commandTimeoutMs}ms  fastTimeout=${config.cluster.fastCommandTimeoutMs}ms`)
+  if (config.cluster.hibernation.enabled) {
+    log('info', 'AurisLink', `  Worker hibernation active — idle timeout ${config.cluster.hibernation.timeoutMs / 1000}s`)
+  }
+} else {
+  log('debug', 'AurisLink', 'Cluster disabled — sources run in single source worker process')
+}
 
 // ─── Cache + Token store ────────────────────────────────────────────────────
 const ctx = { options: config as unknown as Record<string, unknown> }
@@ -96,7 +113,7 @@ if (config.sources.spotify?.enabled) {
 const lyricsManager = new LyricsManager()
 await lyricsManager.setup(config, tokenStore)
 
-const server = await createServer(config, sources, lyricsManager, trackCache, tokenStore)
+const { server, monitor } = await createServer(config, sources, lyricsManager, trackCache, tokenStore)
 
 // ─── Graceful shutdown ──────────────────────────────────────────────────────
 // Inspired by Lavalink's clean session teardown on process exit.
@@ -113,6 +130,7 @@ async function shutdown(signal: string) {
   forceExitTimer.unref()
 
   try {
+    monitor.stop()
     await Promise.all([
       trackCache.flushNow(),
       tokenStore.persistNow(),

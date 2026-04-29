@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  aurislink:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aurislink_app
+    ports:
+      - "2333:2333"
+    volumes:
+      - ./config.ts:/app/config.ts
+      - ./logs:/app/logs
+    environment:
+      # ── Server ──────────────────────────────────────────────────────────────
+      # AURIS_SERVER_HOST: "0.0.0.0"
+      # AURIS_SERVER_PORT: "2333"
+      # AURIS_SERVER_PASSWORD: "youshallnotpass"   # CHANGE THIS!
+
+      # ── Cluster ─────────────────────────────────────────────────────────────
+      # AURIS_CLUSTER_ENABLED: "true"
+      # AURIS_CLUSTER_WORKERS: "1"
+      # AURIS_CLUSTER_COMMANDTIMEOUTMS: "10000"
+      # AURIS_CLUSTER_FASTCOMMANDTIMEOUTMS: "5000"
+      # AURIS_CLUSTER_HIBERNATION_ENABLED: "false"
+      # AURIS_CLUSTER_HIBERNATION_TIMEOUTMS: "1200000"
+
+      # ── Connection health monitor ────────────────────────────────────────────
+      # AURIS_CONNECTION_LOGALLCHECKS: "false"
+      # AURIS_CONNECTION_INTERVALMS: "300000"
+      # AURIS_CONNECTION_TIMEOUTMS: "10000"
+      # AURIS_CONNECTION_THRESHOLDS_BADMBPS: "1"
+      # AURIS_CONNECTION_THRESHOLDS_AVERAGEMBPS: "5"
+
+      # ── Logging ─────────────────────────────────────────────────────────────
+      # AURIS_LOGGING_LEVEL: "info"
+      # AURIS_LOGGING_FILE_ENABLED: "false"
+      # AURIS_LOGGING_FILE_PATH: "logs"
+      # AURIS_LOGGING_FILE_ROTATION: "daily"
+      # AURIS_LOGGING_FILE_TTLDAYS: "7"
+
+      # ── Sources ─────────────────────────────────────────────────────────────
+      # AURIS_SOURCES_SOUNDCLOUD_ENABLED: "true"
+      # AURIS_SOURCES_DEEZER_ENABLED: "false"
+      # AURIS_SOURCES_DEEZER_ARL: ""
+      # AURIS_SOURCES_SPOTIFY_ENABLED: "false"
+      # AURIS_SOURCES_SPOTIFY_CLIENTID: ""
+      # AURIS_SOURCES_SPOTIFY_CLIENTSECRET: ""
+      # AURIS_SOURCES_JIOSAAVN_ENABLED: "false"
+
+    restart: unless-stopped

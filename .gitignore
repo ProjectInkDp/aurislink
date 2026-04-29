@@ -1,31 +1,23 @@
-node_modules/
-dist/
-*.tsbuildinfo
+*
 
-# Config (may contain secrets)
-config.ts
-
-# Logs
-logs/
-*.log
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment
-.env
-.env.local
-
-# Lock files — not committed
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# Backup folders
-aurislink-final/
-aurislink-v1_2_1/
-data/
-
-# Zip releases
-*.zip
+!.github
+!.github/**
+!.husky
+!.husky/**
+!src
+!src/**
+!images
+!images/**
+!.dockerignore
+!.gitignore
+!.gitmessage
+!Dockerfile
+!docker-compose.yml
+!ecosystem.config.cjs
+!LICENSE
+!package.json
+!README.md
+!config.default.ts
+!biome.json
+!commitlint.config.mjs
+!tsconfig.json

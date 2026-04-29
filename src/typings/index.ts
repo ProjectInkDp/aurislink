@@ -136,6 +136,12 @@ export interface AurisConfig {
   // ─── Route planner ────────────────────────────────────────────────────────
   routePlanner?: RoutePlannerConfig
 
+  // ─── Cluster ──────────────────────────────────────────────────────────────
+  cluster?: ClusterConfig
+
+  // ─── Connection health monitor ────────────────────────────────────────────
+  connection?: ConnectionConfig
+
   // ─── DoS protection ───────────────────────────────────────────────────────
   dosProtection?: AurisDosConfig
 
@@ -382,4 +388,30 @@ export interface LetrasSubtitleRawEntry {
 export interface LetrasTranslationLanguageEntry {
   lang?: string
   url?:  string
+}
+
+// ─── Cluster ──────────────────────────────────────────────────────────────────
+
+export interface ClusterConfig {
+  enabled: boolean
+  workers: number
+  commandTimeoutMs: number
+  fastCommandTimeoutMs: number
+  hibernation: {
+    enabled: boolean
+    timeoutMs: number
+  }
+}
+
+// ─── Connection health monitor ────────────────────────────────────────────────
+
+export interface ConnectionConfig {
+  logAllChecks: boolean
+  intervalMs: number
+  timeoutMs: number
+  thresholds: {
+    badMbps: number
+    averageMbps: number
+  }
+  probeUrl: string
 }

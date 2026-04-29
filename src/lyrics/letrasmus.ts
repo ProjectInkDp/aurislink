@@ -214,7 +214,7 @@ const parseSubtitle = (subtitle: string): LyricsLine[] => {
  * @returns Canonical track URL.
  * @internal
  */
-const buildTrackUrl = (dns: string, url: string): string =>
+const buildTrackUrl = (dns: string, url: string | { artist?: string; song?: string; translation?: string }): string =>
   `https://www.letras.mus.br/${dns}/${url}/`
 
 /**
@@ -315,7 +315,7 @@ export default class LetrasMusLyrics {
       trackInfo.author || ''
     )
     if (!best?.dns || !best.url) return null
-    return buildTrackUrl(best.dns, best.url)
+    return buildTrackUrl(best.dns, best.url as string)
   }
 
   /**

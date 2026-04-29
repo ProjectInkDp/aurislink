@@ -15,6 +15,7 @@ import type TrackCache from './core/TrackCache.js'
 import type TokenStore from './core/TokenStore.js'
 import { WebSocketManager } from './core/WebSocketManager.js'
 import { RoutePlanner } from './core/RoutePlanner.js'
+import { ConnectionMonitor } from './core/ConnectionMonitor.js'
 
 export async function createServer(
   config:       AurisConfig,
@@ -100,6 +101,10 @@ export async function createServer(
   const zombieMs = config.zombieThresholdMs ?? 60_000
   wsm.startZombieCleanup(zombieMs)
 
+  // Connection health monitor
+  const monitor = new ConnectionMonitor(config.connection)
+  monitor.start()
+
   await new Promise<void>(resolve => {
     server.listen(config.server.port, config.server.host, () => resolve())
   })
@@ -107,5 +112,5 @@ export async function createServer(
   const proto = http2Enabled && tlsEnabled ? 'https (h2)' : tlsEnabled ? 'https' : 'http'
   log('info', 'Server', `Listening on ${proto}://${config.server.host}:${config.server.port}`)
 
-  return server
+  return { server, monitor }
 }

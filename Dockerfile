@@ -1,21 +1,28 @@
-FROM node:20-alpine
+# Stage 1: Builder
+FROM node:20-alpine AS builder
+
+RUN apk add --no-cache git
 
 WORKDIR /app
 
 COPY package.json ./
-RUN npm install --omit=dev
+RUN npm install
 
-COPY . .
-RUN npm run build
+# Stage 2: Runner
+FROM node:20-alpine
 
-ENV NODE_ENV=production
+WORKDIR /app
+
+COPY --from=builder /app/node_modules ./node_modules
+
+COPY src/ ./src/
+COPY config.default.ts ./config.default.ts
+COPY package.json ./package.json
+COPY tsconfig.json ./tsconfig.json
 
 EXPOSE 2333
 
-# Liveness check — hits /v4/health every 30s.
-# Fails if AurisLink doesn't respond within 5s or returns a non-2xx status.
-# Docker will restart the container after 3 consecutive failures.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:2333/v4/health || exit 1
+ENV AURIS_SERVER_PORT=2333 \
+    AURIS_SERVER_HOST=0.0.0.0
 
-CMD ["node", "--dns-result-order=ipv4first", "dist/src/index.js"]
+CMD ["npm", "start"]

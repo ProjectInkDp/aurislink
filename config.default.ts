@@ -80,6 +80,36 @@ const config: AurisConfig = {
     cooldownMs: 600_000,          // 10 minutes — how long a banned IP stays blocked
   },
 
+  // ─── Cluster ──────────────────────────────────────────────────────────────
+  // Controls multi-worker source isolation.
+  // Source operations (search, load, lyrics) run in a dedicated worker process
+  // so heavy I/O never blocks the main audio loop.
+  // Set enabled: false to run sources in-process (useful for very low-memory devices).
+  cluster: {
+    enabled: true,
+    workers: 1,                    // number of source worker processes (0 = os.cpus().length)
+    commandTimeoutMs: 10_000,      // timeout for heavy ops like loadTracks / playlist fetch
+    fastCommandTimeoutMs: 5_000,   // timeout for quick player commands (play, pause, seek)
+    hibernation: {
+      enabled: false,              // kill idle source workers to reclaim memory
+      timeoutMs: 1_200_000,        // idle time before hibernation — 20 min
+    },
+  },
+
+  // ─── Connection health monitor ────────────────────────────────────────────
+  // Periodically probes outbound connectivity and logs the result.
+  // Handy on Termux / VPS to catch network degradation before it causes playback errors.
+  connection: {
+    logAllChecks: false,           // true = log every probe result, not only degraded ones
+    intervalMs:   300_000,         // how often to probe — 5 min
+    timeoutMs:    10_000,          // HTTP timeout for the probe request — 10 s
+    thresholds: {
+      badMbps:     1,              // below this speed → warn log
+      averageMbps: 5,              // below this speed → info log (above = debug / skipped)
+    },
+    probeUrl: 'https://speed.cloudflare.com/__down?bytes=1000000', // 1 MB test file
+  },
+
   // ─── DoS protection ───────────────────────────────────────────────────────
   // Sliding-window per-IP rate limiter applied before routing.
   // Tune thresholds to match your expected traffic.

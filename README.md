@@ -12,7 +12,7 @@ AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.de
 
 ## Features
 
-- **~30 MB idle memory** — runs comfortably on low-end servers, VPS, and Android via Termux
+- **~43 MB idle (tsx) / ~30 MB compiled** — runs comfortably on low-end servers, VPS, and Android via Termux
 - **Track cache** — AES-256-GCM encrypted on-disk cache for resolved track metadata; LRU eviction, configurable TTL (default 6 h) and entry limit
 - **Token store** — AES-256-GCM encrypted on-disk store for service tokens (Spotify, Deezer, etc.); atomic writes, TTL-aware, survives restarts
 - **SoundCloud** — auto client_id refresh, stream URL cache with TTL, 401 retry
@@ -65,14 +65,31 @@ npm install
 npm start
 ```
 
+### Compiled (lower memory)
+
+```sh
+npm run build
+npm run start:dist
+```
+
+### PM2
+
+```sh
+pm2 start ecosystem.config.cjs
+```
+
 ### Docker
 
 ```sh
 docker build -t aurislink .
-docker run -p 2333:2333 aurislink
+docker run -p 2333:2333 -v ./config.ts:/app/config.ts aurislink
 ```
 
-The Dockerfile is included. It builds the TypeScript project and runs the compiled output, so no JVM is required.
+Or with docker-compose:
+
+```sh
+docker compose up -d
+```
 
 ---
 

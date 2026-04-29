@@ -408,7 +408,7 @@ export type LetrasSubtitleRawEntry = [string, string, string]
 
 export interface LetrasTranslationLanguageEntry {
   lang?:         string
-  url?:          string
+  url?:          string | { artist?: string; song?: string; translation?: string }
   languageCode?: string
 }
 

@@ -16,6 +16,7 @@
 !ecosystem.config.cjs
 !LICENSE
 !package.json
+!package-lock.json
 !README.md
 !config.default.ts
 !biome.json

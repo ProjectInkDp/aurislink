@@ -11,7 +11,8 @@ import { JioSaavnSource } from './sources/jiosaavn.js'
 import { AurisSpotifySource } from './sources/spotify.js'
 import { createServer } from './server.js'
 import { LyricsManager } from './core/LyricsManager.js'
-import TrackCache from './core/TrackCache.js'
+import { PluginManager } from './core/PluginManager.js'
+import TrackCache from './core/TrackCacheSQL.js'
 import TokenStore from './core/TokenStore.js'
 import type { AurisConfig, Source } from './typings/index.js'
 
@@ -29,6 +30,10 @@ try {
 }
 
 initLogger(config.logging)
+
+// ─── Plugins ────────────────────────────────────────────────────────────────
+const pluginManager = new PluginManager(config)
+await pluginManager.setup()
 
 log('info', 'AurisLink', '─────────────────────────────────────')
 log('info', 'AurisLink', '  AurisLink v1.6.0 — starting up…')
@@ -131,8 +136,8 @@ async function shutdown(signal: string) {
 
   try {
     monitor.stop()
+    trackCache.close()
     await Promise.all([
-      trackCache.flushNow(),
       tokenStore.persistNow(),
     ])
     await new Promise<void>((resolve, reject) => {

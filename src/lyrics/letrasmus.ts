@@ -1,3 +1,4 @@
+import type { LyricsLine } from '../typings/lyrics/lyrics.js';
 import type {
   LetrasLyricsTrackInfo,
   LetrasMusLyricsResult,
@@ -7,8 +8,7 @@ import type {
   LetrasSubtitleApiResponse,
   LetrasSubtitleRawEntry,
   LetrasTranslationLanguageEntry
-} from '../typings/index.js'
-import type { LyricsLine } from '../typings/index.js'
+} from '../typings/lyrics/letrasmus.js';
 import { httpGet } from '../utils/http.js'
 import { log } from '../utils/logger.js'
 

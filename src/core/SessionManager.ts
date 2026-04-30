@@ -1,5 +1,5 @@
 // src/core/SessionManager.ts
-// Manages Lavalink v4 sessions and their players.
+// Manages Lavalink v4 sessions, players, and graceful session recovery.
 
 import { randomUUID } from 'node:crypto'
 import { log } from '../utils/logger.js'
@@ -58,12 +58,17 @@ export interface Session {
   timeout:          number
   connectedAt:      number
   players:          Map<string, Player>
+  // Session recovery fields
+  suspended:        boolean
+  pendingEvents:    string[]
+  expiryTimer:      ReturnType<typeof setTimeout> | null
 }
 
 // ─── SessionManager ───────────────────────────────────────────────────────────
 
 export class SessionManager {
-  private sessions = new Map<string, Session>()
+  private sessions   = new Map<string, Session>()
+  private suspended  = new Map<string, Session>()
 
   // ── Sessions ────────────────────────────────────────────────────────────────
 
@@ -71,11 +76,14 @@ export class SessionManager {
     const sessionId = randomUUID()
     const session: Session = {
       sessionId,
-      resuming:    false,
-      resumingKey: null,
-      timeout:     60,
-      connectedAt: Date.now(),
-      players:     new Map(),
+      resuming:      false,
+      resumingKey:   null,
+      timeout:       60,
+      connectedAt:   Date.now(),
+      players:       new Map(),
+      suspended:     false,
+      pendingEvents: [],
+      expiryTimer:   null,
     }
     this.sessions.set(sessionId, session)
     log('info', 'SessionManager', `Session created: ${sessionId}`)
@@ -83,7 +91,7 @@ export class SessionManager {
   }
 
   getSession(sessionId: string): Session | null {
-    return this.sessions.get(sessionId) ?? null
+    return this.sessions.get(sessionId) ?? this.suspended.get(sessionId) ?? null
   }
 
   deleteSession(sessionId: string): boolean {
@@ -94,15 +102,124 @@ export class SessionManager {
   }
 
   updateSession(sessionId: string, resuming: boolean, timeout: number): Session | null {
-    const s = this.sessions.get(sessionId)
+    const s = this.sessions.get(sessionId) ?? this.suspended.get(sessionId)
     if (!s) return null
     s.resuming = resuming
-    s.timeout = timeout
+    s.timeout  = timeout
+    log('debug', 'SessionManager', `Session ${sessionId} updated: resuming=${resuming}, timeout=${timeout}s`)
     return s
   }
 
   getAllSessions(): Session[] {
     return [...this.sessions.values()]
+  }
+
+  // ── Session Recovery ────────────────────────────────────────────────────────
+
+  /**
+   * Suspends a session for later recovery. The session is moved to the
+   * suspended pool and a countdown starts. If the client does not reconnect
+   * within the configured timeout, the session is permanently destroyed.
+   */
+  suspend(sessionId: string): boolean {
+    // Prevent double-suspend
+    if (this.suspended.has(sessionId)) {
+      log('debug', 'SessionManager', `Session ${sessionId} already suspended, skipping.`)
+      return false
+    }
+
+    const session = this.sessions.get(sessionId)
+    if (!session) return false
+
+    // Only suspend if the client opted into resuming
+    if (!session.resuming) {
+      log('debug', 'SessionManager', `Session ${sessionId} has resuming disabled, destroying immediately.`)
+      this.sessions.delete(sessionId)
+      return false
+    }
+
+    log('info', 'SessionManager', `Suspending session ${sessionId} — client has ${session.timeout}s to reconnect.`)
+
+    this.sessions.delete(sessionId)
+    session.suspended = true
+    session.pendingEvents = []
+    this.suspended.set(sessionId, session)
+
+    // Start the expiry countdown
+    session.expiryTimer = setTimeout(() => {
+      log('info', 'SessionManager', `Session ${sessionId} expired after ${session.timeout}s without reconnection. Destroying.`)
+      this.suspended.delete(sessionId)
+      this._cleanupSession(session)
+    }, session.timeout * 1000)
+
+    return true
+  }
+
+  /**
+   * Attempts to recover a suspended session. Returns the session if found
+   * in the suspended pool, otherwise null. Clears the expiry timer and
+   * moves the session back to the active pool.
+   */
+  recover(sessionId: string): Session | null {
+    const session = this.suspended.get(sessionId)
+    if (!session) return null
+
+    log('info', 'SessionManager', `Recovering session ${sessionId} — flushing ${session.pendingEvents.length} queued event(s).`)
+
+    // Cancel the expiry timer
+    if (session.expiryTimer) {
+      clearTimeout(session.expiryTimer)
+      session.expiryTimer = null
+    }
+
+    // Move back to active
+    this.suspended.delete(sessionId)
+    session.suspended = false
+    this.sessions.set(sessionId, session)
+
+    return session
+  }
+
+  /**
+   * Checks whether a session is currently in the suspended pool awaiting
+   * reconnection from the client.
+   */
+  isSuspended(sessionId: string): boolean {
+    return this.suspended.has(sessionId)
+  }
+
+  /**
+   * Queues a serialized event for a suspended session. Events are buffered
+   * until the client reconnects and the session is recovered.
+   */
+  queueEvent(sessionId: string, event: string): boolean {
+    const session = this.suspended.get(sessionId)
+    if (!session) return false
+    session.pendingEvents.push(event)
+    return true
+  }
+
+  /**
+   * Drains all pending events from a recovered session and returns them.
+   * After calling this, the pending queue is empty.
+   */
+  drainPendingEvents(sessionId: string): string[] {
+    const session = this.sessions.get(sessionId)
+    if (!session || session.pendingEvents.length === 0) return []
+    const events = [...session.pendingEvents]
+    session.pendingEvents = []
+    return events
+  }
+
+  /** Internal cleanup when a session expires without recovery. */
+  private _cleanupSession(session: Session): void {
+    if (session.expiryTimer) {
+      clearTimeout(session.expiryTimer)
+      session.expiryTimer = null
+    }
+    session.players.clear()
+    session.pendingEvents = []
+    log('debug', 'SessionManager', `Session ${session.sessionId} fully cleaned up.`)
   }
 
   // ── Players ─────────────────────────────────────────────────────────────────

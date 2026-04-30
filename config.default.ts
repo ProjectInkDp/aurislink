@@ -111,7 +111,7 @@ const config: AurisConfig = {
   },
 
   // ─── DoS protection ───────────────────────────────────────────────────────
-  // Sliding-window per-IP rate limiter applied before routing.
+  // Burst detection with exponential backoff applied before routing.
   // Tune thresholds to match your expected traffic.
   dosProtection: {
     enabled: false,
@@ -132,6 +132,37 @@ const config: AurisConfig = {
       paths: [],   // URL paths exempt (e.g. ['/v4/health'])
     },
     trustProxy: false,  // set true if AurisLink is behind a reverse proxy (uses X-Forwarded-For)
+  },
+
+  // ─── Rate limiting ────────────────────────────────────────────────────────
+  // Multi-scope sliding-window rate limiter.
+  // Tracks independent limits for global traffic, per-IP, per-User-Id header,
+  // and per-Guild-Id (extracted from player URL).
+  // Emits X-RateLimit-* headers on every response.
+  rateLimit: {
+    enabled: true,
+    trustProxy: false,      // set true if behind a reverse proxy (uses X-Forwarded-For)
+    maxEntries: 8_000,      // max tracked entries before LRU eviction
+
+    global: {
+      maxRequests: 2_000,   // max requests across all clients combined
+      windowMs:    60_000,  // 1 minute
+    },
+    perIp: {
+      maxRequests: 120,     // max requests per client IP
+      windowMs:    60_000,  // 1 minute
+    },
+    perUserId: {
+      maxRequests: 60,      // max requests per User-Id header
+      windowMs:    60_000,  // 1 minute
+    },
+    perGuildId: {
+      maxRequests: 30,      // max requests per Guild-Id (from player URL)
+      windowMs:    60_000,  // 1 minute
+    },
+
+    // Paths that bypass rate limiting entirely
+    ignorePaths: ['/v4/health', '/v4/metrics', '/v4/version'],
   },
 
   // ─── Lyrics providers ─────────────────────────────────────────────────────

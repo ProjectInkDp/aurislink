@@ -1,11 +1,9 @@
 import type {
   ApiDosProtectionResult,
-  ApiRequest
-} from '../typings/index.js'
-import type {
-  DosProtectionConfig,
+  ApiRequest,
+  AurisDosConfig as DosProtectionConfig,
   DosProtectionEntry
-} from '../typings/index.js'
+} from '../typings/config/dosProtection.js'
 import { log } from '../utils/logger.js'
 
 type AurisDosContext = {

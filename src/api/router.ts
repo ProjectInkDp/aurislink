@@ -26,9 +26,10 @@ import { handleHealth } from './health.js'
 import { handleVersion } from './version.js'
 import { handleLyricsSubscribe } from './lyricsSubscribe.js'
 import { handleRoutePlannerStatus, handleRoutePlannerFreeAddress, handleRoutePlannerFreeAll } from './routePlanner.js'
+import { handleDashboard } from './dashboard.js'
 import type { RoutePlanner } from '../core/RoutePlanner.js'
-import { checkRateLimit, getClientIp } from '../utils/rateLimit.js'
-import type TrackCache from '../core/TrackCache.js'
+import { RateLimiter, applyRateLimitHeaders } from '../utils/rateLimit.js'
+import type TrackCache from '../core/TrackCacheSQL.js'
 import type TokenStore from '../core/TokenStore.js'
 
 const SESSION_RE = /^\/v4\/sessions\/([^/]+)$/
@@ -47,7 +48,8 @@ export function createRouter(
   lyricsManager?: import('../core/LyricsManager.js').LyricsManager,
   dos?: import('../core/DosProtection.js').default | null,
   trackCache?: TrackCache,
-  tokenStore?: TokenStore
+  tokenStore?: TokenStore,
+  rateLimiter?: RateLimiter,
 ) {
   return async function router(req: http.IncomingMessage, res: http.ServerResponse) {
     const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
@@ -60,13 +62,23 @@ export function createRouter(
     if (method === 'GET' && path === '/v4/health') return handleHealth(req, res)
     if (method === 'GET' && path === '/v4/metrics') return handleMetrics(req, res, sm)
     if (method === 'GET' && path === '/v4/version') return handleVersion(req, res)
+    if (method === 'GET' && path === '/v4/dashboard') return handleDashboard(req, res)
 
-    // Rate limiting — 120 requests per minute per IP
-    const clientIp = getClientIp(req as any)
-    if (!checkRateLimit(clientIp, 120)) {
-      res.writeHead(429, { 'content-type': 'application/json', 'retry-after': '60' })
-      res.end(JSON.stringify({ status: 429, error: 'Too Many Requests', message: 'Rate limit exceeded. Try again in 60 seconds.' }))
-      return
+    // ─── Rate limiting ────────────────────────────────────────────────────────
+    if (rateLimiter) {
+      const rl = rateLimiter.check(req)
+      if (!rl.allowed) {
+        const retryAfter = rl.reset ? String(Math.max(1, Math.ceil((rl.reset - Date.now()) / 1_000))) : '60'
+        res.writeHead(429, { 'content-type': 'application/json', 'retry-after': retryAfter })
+        applyRateLimitHeaders(res, rl)
+        res.end(JSON.stringify({
+          status:  429,
+          error:   'Too Many Requests',
+          message: `Rate limit exceeded (scope: ${rl.scope ?? 'unknown'}). Retry after ${retryAfter}s.`,
+        }))
+        return
+      }
+      applyRateLimitHeaders(res, rl)
     }
 
     if (path.startsWith('/v4')) {

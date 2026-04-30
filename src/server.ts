@@ -11,11 +11,12 @@ import { createRouter } from './api/router.js'
 import { SessionManager } from './core/SessionManager.js'
 import DosProtectionManager from './core/DosProtection.js'
 import type { LyricsManager } from './core/LyricsManager.js'
-import type TrackCache from './core/TrackCache.js'
+import TrackCache from './core/TrackCacheSQL.js'
 import type TokenStore from './core/TokenStore.js'
 import { WebSocketManager } from './core/WebSocketManager.js'
 import { RoutePlanner } from './core/RoutePlanner.js'
 import { ConnectionMonitor } from './core/ConnectionMonitor.js'
+import { RateLimiter } from './utils/rateLimit.js'
 
 export async function createServer(
   config:       AurisConfig,
@@ -44,7 +45,12 @@ export async function createServer(
 
   if (dos) log('info', 'DosProtection', 'Active')
 
-  const router = createRouter(config, sources, sm, wsm, rp, lyricsManager, dos, trackCache, tokenStore)
+  // Boot rate limiter — enabled by default, opt-out via config.rateLimit.enabled = false
+  const rateLimiter = config.rateLimit?.enabled !== false
+    ? new RateLimiter(config.rateLimit)
+    : null
+
+  const router = createRouter(config, sources, sm, wsm, rp, lyricsManager, dos, trackCache, tokenStore, rateLimiter ?? undefined)
 
   const handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
     router(req, res).catch(err => {

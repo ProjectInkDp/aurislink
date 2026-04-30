@@ -1,5 +1,5 @@
 // src/core/WebSocketManager.ts
-// Handles Lavalink v4 WebSocket connections and outbound events.
+// Handles Lavalink v4 WebSocket connections, session recovery, and outbound events.
 
 import { WebSocketServer, WebSocket } from 'ws'
 import type http from 'node:http'
@@ -58,6 +58,7 @@ export class WebSocketManager {
 
       const userId     = req.headers['user-id']     as string | undefined
       const clientName = req.headers['client-name'] as string | undefined
+      const sessionId  = req.headers['session-id']  as string | undefined
 
       if (!userId) {
         socket.write('HTTP/1.1 400 Bad Request\r\n\r\n')
@@ -67,11 +68,18 @@ export class WebSocketManager {
       }
 
       wss.handleUpgrade(req, socket, head, (ws) => {
+        // Attempt session recovery if client provides a Session-Id header
+        if (sessionId && this.sm.isSuspended(sessionId)) {
+          this._handleRecovery(ws, sessionId, userId, clientName)
+          return
+        }
+
+        // Fresh session
         const session = this.sm.createSession()
         const client: Client = { sessionId: session.sessionId, ws, userId }
         this.clients.set(session.sessionId, client)
 
-        log('info', 'WS', `✓ Client connected | userId=${userId} | name=${clientName ?? '?'} | session=${session.sessionId}`)
+        log('info', 'WS', `Client connected | userId=${userId} | name=${clientName ?? '?'} | session=${session.sessionId}`)
 
         this._send(ws, { op: 'ready', resumed: false, sessionId: session.sessionId })
 
@@ -82,6 +90,52 @@ export class WebSocketManager {
     })
 
     log('info', 'WS', 'WebSocket server attached')
+  }
+
+  // ── Session Recovery ────────────────────────────────────────────────────────
+
+  /**
+   * Handles a client reconnecting to a previously suspended session.
+   * Flushes all queued events back to the client.
+   */
+  private _handleRecovery(ws: WebSocket, sessionId: string, userId: string, clientName?: string): void {
+    const session = this.sm.recover(sessionId)
+    if (!session) {
+      // Fallback: create a fresh session if recovery fails
+      const fresh = this.sm.createSession()
+      const client: Client = { sessionId: fresh.sessionId, ws, userId }
+      this.clients.set(fresh.sessionId, client)
+      this._send(ws, { op: 'ready', resumed: false, sessionId: fresh.sessionId })
+      ws.on('message', (data) => this._onMessage(fresh.sessionId, data.toString()))
+      ws.on('close',   (code, reason) => this._onClose(fresh.sessionId, code, reason.toString()))
+      ws.on('error',   (err) => log('error', 'WS', `Error on ${fresh.sessionId}: ${err.message}`))
+      return
+    }
+
+    // Re-register the client
+    const client: Client = { sessionId, ws, userId }
+    this.clients.set(sessionId, client)
+
+    log('info', 'WS', `Session recovered | userId=${userId} | name=${clientName ?? '?'} | session=${sessionId}`)
+
+    // Notify the client that the session was resumed
+    this._send(ws, { op: 'ready', resumed: true, sessionId })
+
+    // Flush all queued events
+    const pending = this.sm.drainPendingEvents(sessionId)
+    for (const raw of pending) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(raw)
+      }
+    }
+
+    if (pending.length > 0) {
+      log('debug', 'WS', `Flushed ${pending.length} pending event(s) to session ${sessionId}`)
+    }
+
+    ws.on('message', (data) => this._onMessage(sessionId, data.toString()))
+    ws.on('close',   (code, reason) => this._onClose(sessionId, code, reason.toString()))
+    ws.on('error',   (err) => log('error', 'WS', `Error on ${sessionId}: ${err.message}`))
   }
 
   // ── Inbound ─────────────────────────────────────────────────────────────────
@@ -96,9 +150,14 @@ export class WebSocketManager {
   }
 
   private _onClose(sessionId: string, code: number, reason: string): void {
-    log('info', 'WS', `✗ Client disconnected | session=${sessionId} | code=${code} | reason=${reason || '—'}`)
+    log('info', 'WS', `Client disconnected | session=${sessionId} | code=${code} | reason=${reason || '—'}`)
     this.clients.delete(sessionId)
-    this.sm.deleteSession(sessionId)
+
+    // Try to suspend the session for recovery instead of destroying immediately
+    const didSuspend = this.sm.suspend(sessionId)
+    if (!didSuspend) {
+      this.sm.deleteSession(sessionId)
+    }
   }
 
   // ── Outbound helpers ─────────────────────────────────────────────────────────
@@ -110,7 +169,15 @@ export class WebSocketManager {
 
   sendToSession(sessionId: string, payload: WsEvent): void {
     const client = this.clients.get(sessionId)
-    if (client) this._send(client.ws, payload)
+    if (client) {
+      this._send(client.ws, payload)
+      return
+    }
+
+    // If the session is suspended and resuming is enabled, queue the event
+    if (this.sm.isSuspended(sessionId)) {
+      this.sm.queueEvent(sessionId, JSON.stringify(payload))
+    }
   }
 
   broadcast(payload: WsEvent): void {
@@ -167,7 +234,7 @@ export class WebSocketManager {
   }
 
   emitTrackStuck(player: Player, thresholdMs: number): void {
-    log('warn', 'WS', `⚠ TrackStuck | guild=${player.guildId} | threshold=${thresholdMs}ms`)
+    log('warn', 'WS', `TrackStuck | guild=${player.guildId} | threshold=${thresholdMs}ms`)
     this.sendToSession(player.sessionId, {
       op:          'event',
       type:        'TrackStuckEvent',
@@ -216,7 +283,7 @@ export class WebSocketManager {
           if (!player.state.connected && !player.track) {
             const idleMs = Date.now() - player.state.time
             if (idleMs >= zombieThresholdMs) {
-              log('warn', 'WS', `🧟 Zombie player removed | guild=${player.guildId} | idleMs=${idleMs}`)
+              log('warn', 'WS', `Zombie player removed | guild=${player.guildId} | idleMs=${idleMs}`)
               this.sm.deletePlayer(session.sessionId, player.guildId)
             }
           }

@@ -2,22 +2,9 @@ import crypto from 'node:crypto'
 import { readFile, unlink, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import type {
-  CacheEntry,
-  FetchedLyrics,
-  FormattedLyrics,
-  LyricsLine,
-  LyricsResult,
-  MxmMacroBody,
-  MxmParsedSubtitleItem,
-  MxmSearchBody,
-  MxmTrack,
-  MxmTrackItem,
-  AurisInstanceForMusixmatch,
-  ScoredTrack,
-  TokenData,
-  TrackInfo
-} from '../typings/index.js'
+import type { LyricsLine, LyricsResult } from '../typings/lyrics/lyrics.js';
+import type { CacheEntry, FetchedLyrics, FormattedLyrics, MxmMacroBody, MxmParsedSubtitleItem, MxmSearchBody, MxmTrack, MxmTrackItem, AurisInstanceForMusixmatch, ScoredTrack, TokenData } from '../typings/lyrics/musixmatch.js';
+import type { TrackInfo } from '../typings/core/player.js';
 import { httpGet } from '../utils/http.js'
 import { log } from '../utils/logger.js'
 

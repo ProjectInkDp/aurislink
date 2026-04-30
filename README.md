@@ -1,119 +1,64 @@
 <div align="center">
   <img src="./images/logo.png" alt="AurisLink" width="120"/>
   <h1>AurisLink</h1>
-  <p><strong>A high-performance, Lavalink v4-compatible audio server</strong> written in TypeScript / Node.js</p>
-  
-  ![version](https://img.shields.io/badge/version-1.6.0-a78bfa?style=flat-square) 
-  ![node](https://img.shields.io/badge/node-20+-339933?style=flat-square&logo=node.js&logoColor=white) 
-  ![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-  ![typescript](https://img.shields.io/badge/typescript-5.0+-3178c6?style=flat-square&logo=typescript&logoColor=white)
-  
-  [📖 Documentation](https://aurislink-docs.vercel.app) • [🚀 Quick Start](#quick-start) • [💻 GitHub](https://github.com/ProjectInkDp/aurislink) • [📝 License](./LICENSE)
+  <p>A lightweight, Lavalink v4-compatible audio server written in TypeScript / Node.js.</p>
+
+  ![version](https://img.shields.io/badge/version-1.6.1--dev-a78bfa?style=flat-square) ![node](https://img.shields.io/badge/node-20+-339933?style=flat-square&logo=node.js&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 </div>
 
----
-
-## About AurisLink
-
-**AurisLink** is a lightweight yet powerful audio streaming server that implements the [Lavalink v4 REST + WebSocket protocol](https://lavalink.dev/api/rest). It's designed to be a drop-in replacement for Lavalink, meaning any existing Lavalink client (Shoukaku, Lavalink.js, Magmastream, etc.) works without any modifications.
-
-Whether you're building a Discord music bot, streaming application, or any audio-driven service, AurisLink provides the performance and flexibility you need.
+AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.dev/api/rest), so any existing Lavalink client (Shoukaku, Lavalink.js, Magmastream, etc.) connects without changes.
 
 ---
 
-## ✨ Key Features
+## Features
 
-### Performance & Efficiency
-- **Lightweight footprint** — ~43 MB idle (tsx) / ~30 MB compiled
-- **Low resource usage** — runs comfortably on low-end servers, VPS, and even Android via Termux
-- **HTTP/2 support** — with TLS and HTTP/1.1 fallback for maximum compatibility
-- **Native TLS** — HTTPS out of the box
-
-### Audio Sources
+- **~43 MB idle (tsx) / ~30 MB compiled** — runs comfortably on low-end servers, VPS, and Android via Termux
+- **Track cache** — AES-256-GCM encrypted on-disk cache for resolved track metadata; LRU eviction, configurable TTL (default 6 h) and entry limit
+- **Token store** — AES-256-GCM encrypted on-disk store for service tokens (Spotify, Deezer, etc.); atomic writes, TTL-aware, survives restarts
 - **SoundCloud** — auto client_id refresh, stream URL cache with TTL, 401 retry
 - **Deezer** — search, metadata, and full 320kbps streams with ARL + Blowfish decryption
-- **Spotify** — anonymous TOTP auth, OAuth2, custom token endpoint, recommendations, ISRC-first resolution
 - **JioSaavn** — search, resolve, 320kbps stream with DES/ECB decryption and proxy support
-
-### Advanced Features
-- **Track cache** — AES-256-GCM encrypted on-disk cache for resolved track metadata with LRU eviction
-- **Token store** — AES-256-GCM encrypted on-disk store for service tokens; survives restarts
-- **Lyrics support** — synced + plain text, SSE real-time stream
-- **Track metadata** — bio, tags, year, listener count via Wikipedia, MusicBrainz, Last.fm
+- **Spotify** — anonymous TOTP auth (no credentials needed), OAuth2, custom token endpoint, recommendations (`sprec:`), ISRC-first stream resolution, album/playlist/artist loading
+- **Lyrics** — synced + plain text, SSE real-time stream; providers: LRCLib, Genius, Deezer, Musixmatch, Letras.mus.br, Yandex Music
+- **Track meaning** — bio, tags, year, listener count via Wikipedia + MusicBrainz + Last.fm
 - **Audio filters** — equalizer, timescale, tremolo, vibrato, rotation, channelMix, lowPass, echo, reverb
+- **HTTP/2** — with TLS and HTTP/1.1 fallback
+- **Native TLS** — HTTPS out of the box
+- **Prometheus metrics** at `/v4/metrics`
+- **Health check** at `/v4/health`
 - **IP Route Planner** — RotateOnBan, LoadBalance, NanoSwitch strategies
-- **Rate limiting** — per-IP DoS protection with sliding-window rate limiter
-
-### Reliability & Monitoring
-- **Prometheus metrics** — at `/v4/metrics` for comprehensive monitoring
-- **Health check** — at `/v4/health` for load balancer integration
+- **Per-IP DoS protection** — burst detection with exponential backoff, block, and proxy trust support
+- **Multi-scope rate limiting** — independent sliding-window limits per global, IP, User-Id, and Guild-Id; `X-RateLimit-*` headers on every response
+- **Source worker** — search/load runs in an isolated process, keeping the audio loop clean
 - **Graceful shutdown** — clean session teardown on SIGINT/SIGTERM
+- **Plugin system** — load custom logic from Local, NPM, GitHub, or direct URLs; isolated context with native logger access
 - **TrackStuck watchdog** + **zombie player cleanup**
-- **File logging** — with daily rotation and TTL configuration
-- **Source worker** — search/load runs in isolated process, keeping audio loop clean
-
-### Developer-Friendly
+- **File logging** with daily rotation and TTL
 - **Lavalink v4 compatible** — drop-in replacement, no client changes needed
-- **TypeScript** — fully typed codebase for better IDE support
-- **REST + WebSocket** — standard protocols for easy integration
-- **Comprehensive logging** — debug, info, warn, error levels with timestamps
 
 ---
 
-## 📋 Requirements
+## Requirements
 
-- **Node.js** 20.0.0 or higher
-- **npm** 9.0.0 or higher
-- **Disk space** for track cache and token store (configurable)
+- **Node.js 20+**
+- **npm 9+**
 
 ---
 
-## 🚀 Quick Start
+## Running AurisLink
 
-### Installation
+### Linux / macOS / Windows WSL
 
-#### Linux / macOS / Windows WSL
-```bash
-# Clone the repository
-git clone https://github.com/ProjectInkDp/aurislink.git
+```sh
+unzip aurislink.zip
 cd aurislink
-
-# Install dependencies
 npm install
-
-# Copy and configure
-cp config.default.ts config.ts
-
-# Start the server
 npm start
 ```
 
-#### Compiled Version (Lower Memory)
-```bash
-npm run build
-npm run start:dist
-```
+### Termux (Android)
 
-#### Docker
-```bash
-docker build -t aurislink .
-docker run -p 2333:2333 -v ./config.ts:/app/config.ts aurislink
-```
-
-Or with docker-compose:
-```bash
-docker compose up -d
-```
-
-#### PM2 (Production)
-```bash
-pm2 start ecosystem.config.cjs
-pm2 save
-pm2 startup
-```
-
-#### Termux (Android)
-```bash
+```sh
 cd ~
 unzip /sdcard/Download/aurislink.zip
 cd aurislink
@@ -121,288 +66,428 @@ npm install
 npm start
 ```
 
-### Verify Installation
+### Compiled (lower memory)
 
-```bash
-# Check server info
+```sh
+npm run build
+npm run start:dist
+```
+
+### PM2
+
+```sh
+pm2 start ecosystem.config.cjs
+```
+
+### Docker
+
+```sh
+docker build -t aurislink .
+docker run -p 2333:2333 -v ./config.ts:/app/config.ts aurislink
+```
+
+Or with docker-compose:
+
+```sh
+docker compose up -d
+```
+
+---
+
+## Quick test with curl
+
+```sh
+# Server info
 curl -H "Authorization: youshallnotpass" http://localhost:2333/v4/info
 
-# Expected response:
-# {
-#   "version": "1.6.0",
-#   "buildLine": 1234,
-#   "git": { "branch": "main", "commit": "abc123", ... },
-#   ...
-# }
-```
+# Stats
+curl -H "Authorization: youshallnotpass" http://localhost:2333/v4/stats
 
----
-
-## ⚙️ Configuration
-
-AurisLink uses a TypeScript configuration file (`config.ts`) for all settings. Here's a minimal example:
-
-```typescript
-const config = {
-  server: {
-    host: '0.0.0.0',
-    port: 2333,
-    password: 'youshallnotpass',
-    tls: { 
-      enabled: false, 
-      cert: '', 
-      key: '' 
-    },
-  },
-  logging: {
-    level: 'info',
-    timestamps: true,
-    colors: true,
-  },
-  sources: {
-    soundcloud: { 
-      enabled: true, 
-      clientId: '' 
-    },
-    deezer: { 
-      enabled: true, 
-      arl: '', 
-      decryptionKey: '' 
-    },
-    spotify: { 
-      enabled: true, 
-      clientId: '', 
-      clientSecret: '' 
-    },
-    jiosaavn: { 
-      enabled: true 
-    },
-  },
-};
-
-export default config;
-```
-
-For detailed configuration options, see the [Configuration Guide](https://aurislink-docs.vercel.app/docs/configuration).
-
----
-
-## 📚 Documentation
-
-Complete documentation is available at **[aurislink-docs.vercel.app](https://aurislink-docs.vercel.app)**
-
-- **[Getting Started](https://aurislink-docs.vercel.app/docs/getting-started)** — Installation and setup guide
-- **[Configuration](https://aurislink-docs.vercel.app/docs/configuration)** — All configuration options explained
-- **[API Reference](https://aurislink-docs.vercel.app/docs/api)** — REST API and WebSocket documentation
-- **[Audio Sources](https://aurislink-docs.vercel.app/docs/sources)** — How to configure each audio source
-- **[Audio Filters](https://aurislink-docs.vercel.app/docs/filters)** — Available audio effects and filters
-
----
-
-## 🔌 API Usage
-
-### REST API Example
-
-```bash
-# Get server info
+# Search SoundCloud
 curl -H "Authorization: youshallnotpass" \
-  http://localhost:2333/v4/info
+  "http://localhost:2333/v4/loadtracks?identifier=scsearch:lofi"
 
-# Load tracks
+# Search Deezer
 curl -H "Authorization: youshallnotpass" \
-  "http://localhost:2333/v4/loadtracks?identifier=ytsearch:never%20gonna%20give%20you%20up"
+  "http://localhost:2333/v4/loadtracks?identifier=dzsearch:daft punk"
 
-# Create a player session
-curl -X POST \
-  -H "Authorization: youshallnotpass" \
-  http://localhost:2333/v4/sessions/my-session
+# Search Spotify
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/loadtracks?identifier=spsearch:the weeknd"
 
-# Update player
-curl -X PATCH \
+# Spotify recommendations — by genre
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/loadtracks?identifier=sprec:pop"
+
+# Spotify recommendations — full seed params
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/loadtracks?identifier=sprec:seed_genres=pop%26seed_artists=1Xyo4u8uXC1ZmMpatF05PJ%26limit=10"
+
+# Load a Spotify track URL
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/loadtracks?identifier=https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT"
+
+# Load a Spotify playlist
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/loadtracks?identifier=https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
+
+# Search JioSaavn
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/loadtracks?identifier=jssearch:arijit singh"
+
+# Lyrics for the current track in a player
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/sessions/SESSION_ID/players/GUILD_ID/track/lyrics"
+
+# Track meaning — bio, tags, year, listeners (Wikipedia + MusicBrainz + Last.fm)
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/meaning?encodedTrack=BASE64_HERE&language=pt"
+
+# Health check
+curl http://localhost:2333/v4/health
+
+# Decode a track
+curl -H "Authorization: youshallnotpass" \
+  "http://localhost:2333/v4/decodetrack?encodedTrack=<base64>"
+
+# WebSocket (requires wscat: npm install -g wscat)
+wscat \
   -H "Authorization: youshallnotpass" \
-  -H "Content-Type: application/json" \
-  -d '{"track":{"encoded":"..."},"volume":100}' \
-  http://localhost:2333/v4/sessions/my-session/players/guild-id
+  -H "User-Id: YOUR_BOT_ID" \
+  -H "Client-Name: MyBot" \
+  -c ws://localhost:2333/v4/websocket
 ```
 
-### WebSocket Connection
+---
 
-```javascript
-const ws = new WebSocket('ws://localhost:2333/v4/websocket', {
-  headers: {
-    'Authorization': 'youshallnotpass'
+## Configuration
+
+Copy `config.default.ts` → `config.ts` and edit:
+
+| Key | Default | Description |
+|---|---|---|
+| `server.host` | `0.0.0.0` | Bind address |
+| `server.port` | `2333` | Port |
+| `server.password` | `youshallnotpass` | Authorization header value |
+| `server.tls.enabled` | `false` | Enable HTTPS |
+| `server.tls.cert` | `""` | Path to TLS certificate |
+| `server.tls.key` | `""` | Path to TLS private key |
+| `server.http2.enabled` | `false` | Enable HTTP/2 (requires TLS; HTTP/1.1 fallback active) |
+| `playerUpdateInterval` | `5000` | Player position update interval (ms) |
+| `statsInterval` | `60000` | Stats broadcast interval (ms) |
+| `trackStuckThresholdMs` | `10000` | ms without progress before TrackStuck fires |
+| `zombieThresholdMs` | `60000` | ms before an idle disconnected player is destroyed |
+| `maxSearchResults` | `10` | Max results per search |
+| `maxPlaylistLength` | `100` | Max tracks loaded from a playlist |
+| `logging.file.enabled` | `false` | Save logs to files |
+| `logging.file.path` | `"logs"` | Directory for log files |
+| `logging.file.rotation` | `"daily"` | Log rotation — `daily`, `weekly`, or `none` |
+| `logging.file.ttlDays` | `7` | Delete logs older than N days (0 = keep forever) |
+| `sources.soundcloud.clientId` | `""` | Leave empty for auto-detection |
+| `sources.deezer.enabled` | `false` | Enable Deezer source |
+| `sources.deezer.arl` | `""` | Deezer ARL cookie (enables full streams) |
+| `sources.deezer.decryptionKey` | `""` | 16-char Blowfish key (required with ARL) |
+| `sources.jiosaavn.enabled` | `false` | Enable JioSaavn source |
+| `sources.jiosaavn.playlistLoadLimit` | `50` | Max tracks loaded from a playlist/album |
+| `sources.jiosaavn.artistLoadLimit` | `20` | Max tracks loaded from an artist |
+| `sources.jiosaavn.secretKey` | `"38346591"` | DES/ECB key — leave as default |
+| `sources.jiosaavn.proxy.url` | `""` | HTTP/HTTPS proxy (useful if hosted outside India) |
+| `sources.lastfm.apiKey` | `""` | Last.fm API key — enables listeners/playcount in `/v4/meaning` |
+| `sources.spotify.enabled` | `false` | Enable Spotify source |
+| `sources.spotify.market` | `US` | ISO country code for catalog lookups |
+| `sources.spotify.playlistLoadLimit` | `100` | Max tracks from a playlist |
+| `sources.spotify.albumLoadLimit` | `50` | Max tracks from an album |
+| `sources.spotify.preferAnonymousToken` | `true` | Use anonymous TOTP token (no credentials needed) |
+| `sources.spotify.clientId` | `""` | OAuth2 client ID — more stable than anonymous token |
+| `sources.spotify.clientSecret` | `""` | OAuth2 client secret — required with clientId |
+| `sources.spotify.customTokenEndpoint` | `""` | Custom URL to fetch Spotify token |
+| `sources.spotify.sp_dc` | `""` | Spotify session cookie (enables lyrics) |
+| `routePlanner.enabled` | `false` | Enable IP rotation |
+| `routePlanner.ipPool` | `[]` | List of outbound IPs to rotate between |
+| `routePlanner.strategy` | `RotateOnBan` | `RotateOnBan` \| `LoadBalance` \| `NanoSwitch` |
+| `routePlanner.cooldownMs` | `600000` | How long a banned IP stays blocked (ms) |
+| `dosProtection.enabled` | `false` | Enable per-IP DoS protection |
+| `dosProtection.thresholds.burstRequests` | `100` | Max requests per window per IP |
+| `dosProtection.thresholds.timeWindowMs` | `10000` | Sliding window size (ms) |
+| `dosProtection.mitigation.blockDurationMs` | `30000` | Block duration on hard limit violation |
+| `dosProtection.trustProxy` | `false` | Trust `X-Forwarded-For` (set true behind a reverse proxy) |
+| `rateLimit.enabled` | `true` | Enable multi-scope rate limiting |
+| `rateLimit.trustProxy` | `false` | Trust `X-Forwarded-For` for IP resolution |
+| `rateLimit.global.maxRequests` | `2000` | Max requests across all clients per window |
+| `rateLimit.global.windowMs` | `60000` | Global window size (ms) |
+| `rateLimit.perIp.maxRequests` | `120` | Max requests per client IP per window |
+| `rateLimit.perIp.windowMs` | `60000` | Per-IP window size (ms) |
+| `rateLimit.perUserId.maxRequests` | `60` | Max requests per `User-Id` header per window |
+| `rateLimit.perUserId.windowMs` | `60000` | Per-user window size (ms) |
+| `rateLimit.perGuildId.maxRequests` | `30` | Max requests per Guild-Id (from player URL) per window |
+| `rateLimit.perGuildId.windowMs` | `60000` | Per-guild window size (ms) |
+| `rateLimit.maxEntries` | `8000` | Max tracked entries before LRU eviction |
+| `rateLimit.ignorePaths` | `['/v4/health', '/v4/metrics', '/v4/version']` | Paths that bypass rate limiting |
+| `lyrics.yandexmusic.accessToken` | `""` | Yandex Music OAuth2 token (enables Yandex lyrics provider) |
+| `plugins` | `[]` | List of plugins to load at startup |
+
+### Deezer setup
+
+Without `arl`, Deezer works for search and metadata only (no actual audio stream). To enable full streams:
+
+```ts
+deezer: {
+  enabled: true,
+  arl: 'your_arl_here',
+  decryptionKey: '0123456789abcdef',  // exactly 16 characters
+}
+```
+
+### JioSaavn setup
+
+JioSaavn works out of the box — no account or API key required:
+
+```ts
+jiosaavn: {
+  enabled: true,
+}
+```
+
+> If hosted outside India, configure a proxy:
+> ```ts
+> jiosaavn: {
+>   enabled: true,
+>   proxy: {
+>     url: 'https://your-india-proxy.example.com',
+>     username: 'user',   // optional
+>     password: 'pass',   // optional
+>   },
+> }
+> ```
+
+### Plugin setup
+
+AurisLink supports loading plugins from multiple sources. Add them to the `plugins` array in `config.ts`:
+
+```ts
+plugins: [
+  // Local plugin (relative to /plugins directory)
+  {
+    name: 'my-local-plugin',
+    source: 'local',
+    path: 'my-plugin-folder',
+    config: { someOption: true }
+  },
+  // NPM package (auto-installs if missing)
+  {
+    name: 'aurislink-plugin-example',
+    source: 'npm',
+    path: 'aurislink-plugin-example'
+  },
+  // GitHub repository
+  {
+    name: 'github-plugin',
+    source: 'github',
+    path: 'owner/repo#branch'
+  },
+  // Direct URL to a .js file
+  {
+    name: 'remote-plugin',
+    source: 'url',
+    path: 'https://example.com/plugin.js'
   }
-});
-
-ws.on('message', (data) => {
-  const event = JSON.parse(data);
-  console.log('Event:', event.op, event);
-});
+]
 ```
 
-For more examples and detailed API documentation, visit the [API Reference](https://aurislink-docs.vercel.app/docs/api).
+A plugin must export a default function:
 
----
-
-## 🎵 Supported Audio Sources
-
-| Source | Status | Features |
-|--------|--------|----------|
-| **SoundCloud** | ✅ Supported | Search, metadata, streaming |
-| **Deezer** | ✅ Supported | Search, 320kbps streams, metadata |
-| **Spotify** | ✅ Supported | Search, playlists, recommendations |
-| **JioSaavn** | ✅ Supported | Search, 320kbps streams |
-| **YouTube** | ✅ Supported | Search, playlists, streams |
-
----
-
-## 🎚️ Audio Filters
-
-AurisLink supports a wide range of audio filters for professional audio processing:
-
-- **Equalizer** — Adjust frequency bands (10 bands)
-- **Timescale** — Speed and pitch control
-- **Tremolo** — Amplitude modulation
-- **Vibrato** — Frequency modulation
-- **Rotation** — Stereo rotation effect
-- **Channel Mix** — Mix stereo channels
-- **Low Pass** — Remove high frequencies
-- **Echo** — Add echo/delay effect
-- **Reverb** — Add reverb effect
-- **Volume** — Adjust output volume
-
----
-
-## 🛠️ Development
-
-### Project Structure
-
-```
-aurislink/
-├── src/
-│   ├── sources/          # Audio source implementations
-│   ├── filters/          # Audio filter implementations
-│   ├── playback/         # Playback engine
-│   ├── utils/            # Utility functions
-│   ├── typings/          # TypeScript type definitions
-│   ├── server.ts         # HTTP server setup
-│   └── index.ts          # Entry point
-├── config.default.ts     # Default configuration
-├── package.json
-├── tsconfig.json
-└── README.md
+```js
+export default function(ctx) {
+  ctx.logger('info', 'Hello from plugin!');
+  ctx.logger('info', `Running AurisLink v${ctx.config.version}`);
+}
 ```
 
-### Building from Source
+### Spotify setup
 
-```bash
-# Install dependencies
-npm install
+Spotify works out of the box with anonymous TOTP — no credentials required:
 
-# Build TypeScript
-npm run build
-
-# Run compiled version
-npm run start:dist
-
-# Development mode with hot reload
-npm run dev
+```ts
+spotify: {
+  enabled: true,
+}
 ```
 
-### Testing
+For a more stable connection, use OAuth2 credentials from the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard):
 
-```bash
-# Run tests
-npm test
+```ts
+spotify: {
+  enabled: true,
+  preferAnonymousToken: false,
+  clientId: 'your_client_id',
+  clientSecret: 'your_client_secret',
+}
+```
 
-# Run tests with coverage
-npm test -- --coverage
+Or point to a custom token endpoint (e.g. self-hosted proxy):
+
+```ts
+spotify: {
+  enabled: true,
+  customTokenEndpoint: 'https://your-token-server.example.com/spotify/token',
+}
+```
+
+#### Spotify search prefixes
+
+| Prefix | Description |
+|---|---|
+| `spsearch:<query>` | Search tracks by name/artist |
+| `sprec:<genres>` | Recommendations by genre — e.g. `sprec:pop` |
+| `sprec:<seed params>` | Full recommendations — e.g. `sprec:seed_genres=pop&seed_artists=ID&limit=10` |
+
+---
+
+## API — Implemented Endpoints
+
+### REST
+
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/v4/info` | Server info, version, sources |
+| `GET` | `/v4/stats` | Memory, CPU, player counts |
+| `GET` | `/v4/loadtracks` | Search or load tracks |
+| `GET` | `/v4/decodetrack` | Decode a single encoded track |
+| `POST` | `/v4/decodetracks` | Decode multiple encoded tracks (batch) |
+| `POST` | `/v4/encodetrack` | Encode a TrackInfo into a Lavalink v4 string |
+| `POST` | `/v4/encodetracks` | Encode multiple TrackInfo objects (batch) |
+| `PATCH` | `/v4/sessions/:sessionId` | Update session resuming/timeout |
+| `GET` | `/v4/sessions/:sessionId/players` | List all players in a session |
+| `GET` | `/v4/sessions/:sessionId/players/:guildId` | Get a specific player |
+| `PATCH` | `/v4/sessions/:sessionId/players/:guildId` | Create/update a player |
+| `DELETE` | `/v4/sessions/:sessionId/players/:guildId` | Destroy a player |
+| `GET` | `/v4/sessions/:sessionId/players/:guildId/track/lyrics` | Lyrics for the current track |
+| `GET` | `/v4/meaning` | Track bio, tags, year, listeners |
+| `GET` | `/v4/loadchapters` | Track chapters (Deezer podcast / SoundCloud parsed) |
+| `GET` | `/v4/metrics` | Prometheus-compatible plain-text metrics |
+| `GET` | `/v4/health` | Liveness check — `{ status, version, uptime }` |
+| `GET` | `/v4/sessions/:sessionId/players/:guildId/lyrics/subscribe` | SSE stream of synced lyrics lines |
+| `GET` | `/v4/routeplanner/status` | Route planner status and failing addresses |
+| `POST` | `/v4/routeplanner/free/address` | Unban a specific IP address |
+| `POST` | `/v4/routeplanner/free/all` | Unban all addresses |
+
+### WebSocket
+
+Connect with headers:
+
+```
+Authorization: <password>
+User-Id: <bot user id>
+Client-Name: <your client name>
+```
+
+#### Events (server → client)
+
+| op | Description |
+|---|---|
+| `ready` | Sent on connect with `sessionId` |
+| `playerUpdate` | Player position update |
+| `stats` | Server stats broadcast |
+| `event` | Track events (start, end, exception, stuck) |
+
+---
+
+## Sources
+
+| Source | Status | Search prefix | Notes |
+|---|---|---|---|
+| SoundCloud | ✅ Ready | `scsearch:` | Auto client_id refresh, stream cache, 401 retry |
+| Deezer | ✅ Ready | `dzsearch:` | Public API (metadata); full streams with ARL |
+| JioSaavn | ✅ Ready | `jssearch:` | DES/ECB stream decryption, proxy support, 320kbps |
+| Spotify | ✅ Ready | `spsearch:` `sprec:` | Anonymous TOTP or OAuth2. Recommendations, ISRC-first resolve. Streams delegated to SoundCloud/Deezer |
+| YouTube | 🔜 Planned | `ytsearch:` | — |
+
+### Lyrics providers
+
+| Provider | Notes |
+|---|---|
+| LRCLib | Free, synced LRC lyrics, no credentials needed |
+| Genius | Plain-text lyrics, no credentials needed |
+| Deezer | Synced lyrics (requires Deezer source enabled) |
+| Musixmatch | Word-level synced lyrics via public API |
+| Letras.mus.br | PT-BR focused lyrics provider with subtitle sync |
+| Yandex Music | Synced lyrics via OAuth2 token (optional) |
+
+---
+
+## Project Structure
+
+```
+images/
+├── logo.svg                # Vector logo
+└── logo.png                # Raster logo (400×400)
+src/
+├── api/
+│   ├── helpers.ts          # sendJson, sendError, requireAuth
+│   ├── info.ts             # GET /v4/info
+│   ├── loadtracks.ts       # GET /v4/loadtracks
+│   ├── chapters.ts         # GET /v4/loadchapters
+│   ├── health.ts           # GET /v4/health
+│   ├── lyrics.ts           # GET /v4/sessions/:id/players/:id/track/lyrics
+│   ├── lyricsSubscribe.ts  # GET /v4/sessions/:id/players/:id/lyrics/subscribe (SSE)
+│   ├── metrics.ts          # GET /v4/metrics (Prometheus)
+│   ├── meaning.ts          # GET /v4/meaning
+│   ├── players.ts          # Session/player CRUD
+│   ├── router.ts           # Central request router
+│   ├── routePlanner.ts     # GET/POST /v4/routeplanner/*
+│   └── tracks.ts           # encode/decode endpoints
+├── core/
+│   ├── RoutePlanner.ts     # IP rotation pool with strategy + ban management
+│   ├── SessionManager.ts   # Session + player state
+│   ├── TokenStore.ts       # AES-256-GCM encrypted token store (Spotify, Deezer, etc.)
+│   ├── TrackCache.ts       # AES-256-GCM encrypted track cache with LRU eviction
+│   └── WebSocketManager.ts # WS server + event emitter
+├── decrypters/
+│   ├── blowfish-cbc.ts     # Blowfish-CBC (Deezer stream decryption)
+│   └── des-ecb.ts          # DES/ECB (JioSaavn stream decryption)
+├── filters/
+│   ├── FilterChain.ts      # Filter pipeline
+│   ├── channelMix.ts
+│   ├── echo.ts
+│   ├── equalizer.ts
+│   ├── lowPass.ts
+│   ├── reverb.ts
+│   ├── rotation.ts
+│   ├── timescale.ts
+│   ├── tremolo.ts
+│   ├── vibrato.ts
+│   └── volume.ts
+├── sources/
+│   ├── deezer.ts           # Deezer source
+│   ├── jiosaavn.ts         # JioSaavn source
+│   ├── soundcloud.ts       # SoundCloud source
+│   └── spotify.ts          # Spotify source
+├── typings/
+│   ├── index.ts            # Shared TypeScript interfaces
+│   ├── tokenStore.ts       # TokenStore entry/payload/stats interfaces
+│   └── trackCache.ts       # TrackCacheEntry interface
+├── utils/
+│   ├── http.ts             # Native HTTP client
+│   ├── logger.ts           # Colored logger with file rotation
+│   ├── rateLimit.ts        # Multi-scope sliding-window rate limiter (global / IP / user / guild)
+│   ├── spotifyAuth.ts      # Spotify token manager (anonymous / OAuth2 / custom endpoint)
+│   └── track.ts            # Lavalink v4 track encode/decode
+├── index.ts                # Entry point
+├── server.ts               # HTTP + WebSocket server (HTTP/1.1, HTTPS, HTTP/2)
+└── worker.ts               # Source worker process (isolates search/load from audio loop)
 ```
 
 ---
 
-## 📊 Monitoring
+## Contributing
 
-### Prometheus Metrics
+- `v1` — current stable version
+- `dev` — development / community PRs
 
-Access metrics at `http://localhost:2333/v4/metrics` for integration with Prometheus, Grafana, and other monitoring tools.
-
-### Health Check
-
-Use `http://localhost:2333/v4/health` for load balancer health checks.
+PRs are welcome on the `dev` branch.
 
 ---
 
-## 🚀 Deployment
+## License
 
-### Production Recommendations
-
-1. **Use compiled version** — Lower memory footprint
-2. **Enable TLS** — Secure connections
-3. **Configure rate limiting** — Protect against abuse
-4. **Set up monitoring** — Use Prometheus metrics
-5. **Use PM2** — Process management and auto-restart
-6. **Configure logging** — File logging with rotation
-
-### Example PM2 Configuration
-
-```javascript
-// ecosystem.config.cjs
-module.exports = {
-  apps: [{
-    name: 'aurislink',
-    script: './dist/index.js',
-    instances: 1,
-    exec_mode: 'cluster',
-    env: {
-      NODE_ENV: 'production'
-    },
-    error_file: './logs/error.log',
-    out_file: './logs/out.log',
-    log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
-  }]
-};
-```
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-### Guidelines
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- Built with [Node.js](https://nodejs.org/) and [TypeScript](https://www.typescriptlang.org/)
-- Inspired by [Lavalink](https://lavalink.dev/)
-- Audio processing powered by [Lavaplayer](https://github.com/lavalink-devs/Lavalink)
-
----
-
-## 📞 Support
-
-- **Documentation** — [aurislink-docs.vercel.app](https://aurislink-docs.vercel.app)
-- **Issues** — [GitHub Issues](https://github.com/ProjectInkDp/aurislink/issues)
-- **Discussions** — [GitHub Discussions](https://github.com/ProjectInkDp/aurislink/discussions)
-
----
-
-<div align="center">
-  <p>Made with ❤️ by <a href="https://github.com/ProjectInkDp">ProjectInkDp</a></p>
-  <p><a href="https://github.com/ProjectInkDp/aurislink">⭐ Star us on GitHub</a></p>
-</div>
+[MIT](./LICENSE) © AurisLink Contributors

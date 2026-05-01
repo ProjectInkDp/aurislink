@@ -3,7 +3,7 @@
   <h1>AurisLink</h1>
   <p>A high-performance, lightweight Lavalink v4 compatible server built with Node.js.</p>
 
-  ![version](https://img.shields.io/badge/version-1.6.2--dev.9f32175-blueviolet?style=flat-square)
+  ![version](https://img.shields.io/badge/version-1.6.3--dev.9f32175-blueviolet?style=flat-square)
   ![engine](https://img.shields.io/badge/engine-AurisPlayer-a78bfa?style=flat-square)
   ![node](https://img.shields.io/badge/node-20+-339933?style=flat-square&logo=node.js&logoColor=white)
   ![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)

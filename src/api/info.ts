@@ -2,9 +2,16 @@
 
 import type http from 'node:http'
 import { sendJson } from './helpers.js'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
-const AURIS_VERSION = '1.5.0'
-const [MAJOR, MINOR, PATCH] = AURIS_VERSION.split('.').map(Number)
+// Read version from package.json dynamically
+const pkgPath = join(process.cwd(), 'package.json')
+const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+const AURIS_VERSION = pkg.version
+
+const [semverBase, preRelease] = AURIS_VERSION.split('-')
+const [MAJOR, MINOR, PATCH] = semverBase.split('.').map(Number)
 
 const INFO = {
   version: {
@@ -12,12 +19,12 @@ const INFO = {
     major:      MAJOR,
     minor:      MINOR,
     patch:      PATCH,
-    preRelease: null,
+    preRelease: preRelease || null,
     build:      null,
   },
   buildTime:      Date.now(),
   git: {
-    branch:     'v1',
+    branch:     'dev',
     commit:     'unknown',
     commitTime: 0,
   },
@@ -26,7 +33,7 @@ const INFO = {
   sourceManagers: ['soundcloud', 'deezer', 'jiosaavn', 'spotify'],
   filters: [
     'equalizer', 'timescale', 'tremolo', 'vibrato',
-    'rotation', 'channelMix', 'lowPass', 'echo', 'reverb', 'volume',
+    'rotation', 'channelMix', 'lowPass', 'echo', 'reverb', 'volume', 'distortion'
   ],
   plugins: [],
 }

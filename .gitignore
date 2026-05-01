@@ -18,7 +18,7 @@
 !package.json
 !package-lock.json
 !README.md
-!config.default.ts
+!application.example.yml
 !biome.json
 !commitlint.config.mjs
 !tsconfig.json

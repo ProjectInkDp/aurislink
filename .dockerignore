@@ -10,5 +10,5 @@ README.md
 LICENSE
 biome.json
 commitlint.config.mjs
-config.ts
+application.yml
 *.cache

@@ -1,9 +1,12 @@
 <div align="center">
   <img src="./images/logo.png" alt="AurisLink" width="120"/>
   <h1>AurisLink</h1>
-  <p>A lightweight, Lavalink v4-compatible audio server written in TypeScript / Node.js.</p>
+  <p>A lightweight, Lavalink v4-compatible audio server written in TypeScript / Node.js.
 
-  ![version](https://img.shields.io/badge/version-1.6.1--dev-a78bfa?style=flat-square) ![node](https://img.shields.io/badge/node-20+-339933?style=flat-square&logo=node.js&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)
+> [!WARNING]
+> **Independence Declaration:** AurisLink is an independent project. We have **no involvement, affiliation, or connection** with other projects such as NodeLink or similar TypeScript-based implementations. This project is a separate effort with its own architecture and development guidelines. Any claims to the contrary are false.</p>
+
+  ![version](https://img.shields.io/badge/version-1.6.3--dev.1f93d9c-a78bfa?style=flat-square) ![node](https://img.shields.io/badge/node-20+-339933?style=flat-square&logo=node.js&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 </div>
 
 AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.dev/api/rest), so any existing Lavalink client (Shoukaku, Lavalink.js, Magmastream, etc.) connects without changes.
@@ -21,7 +24,7 @@ AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.de
 - **Spotify** — anonymous TOTP auth (no credentials needed), OAuth2, custom token endpoint, recommendations (`sprec:`), ISRC-first stream resolution, album/playlist/artist loading
 - **Lyrics** — synced + plain text, SSE real-time stream; providers: LRCLib, Genius, Deezer, Musixmatch, Letras.mus.br, Yandex Music
 - **Track meaning** — bio, tags, year, listener count via Wikipedia + MusicBrainz + Last.fm
-- **Audio filters** — equalizer, timescale, tremolo, vibrato, rotation, channelMix, lowPass, echo, reverb
+- **Audio filters** — equalizer, timescale, tremolo, vibrato, rotation, channelMix, lowPass, echo, reverb, distortion
 - **HTTP/2** — with TLS and HTTP/1.1 fallback
 - **Native TLS** — HTTPS out of the box
 - **Prometheus metrics** at `/v4/metrics`
@@ -83,7 +86,7 @@ pm2 start ecosystem.config.cjs
 
 ```sh
 docker build -t aurislink .
-docker run -p 2333:2333 -v ./config.ts:/app/config.ts aurislink
+docker run -p 2333:2333 -v ./application.yml:/app/application.yml aurislink
 ```
 
 Or with docker-compose:
@@ -162,7 +165,7 @@ wscat \
 
 ## Configuration
 
-Copy `config.default.ts` → `config.ts` and edit:
+Copy `application.example.yml` → `application.yml` and edit:
 
 | Key | Default | Description |
 |---|---|---|

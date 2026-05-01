@@ -16,7 +16,7 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 
 COPY src/ ./src/
-COPY config.default.ts ./config.default.ts
+COPY application.example.yml ./application.example.yml
 COPY package.json ./package.json
 COPY tsconfig.json ./tsconfig.json
 

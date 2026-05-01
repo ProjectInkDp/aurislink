@@ -4,6 +4,7 @@
 import { randomUUID } from 'node:crypto'
 import { log } from '../utils/logger.js'
 import type { Track } from '../typings/index.js'
+import { Player as AurisPlayer } from '@projectinkdp/auris-player'
 
 // ─── Player state ─────────────────────────────────────────────────────────────
 
@@ -11,11 +12,11 @@ export interface Filters {
   volume?:      number
   equalizer?:   { band: number; gain: number }[]
   karaoke?:     { level?: number; monoLevel?: number; filterBand?: number; filterWidth?: number } | null
-  timescale?:   { speed?: number; pitch?: number; rate?: number } | null
-  tremolo?:     { frequency?: number; depth?: number } | null
+  timescale?:   { speed?: number; pitch?: number; rate?: number }
+  tremolo?:     { frequency?: number; depth?: number }
   vibrato?:     { frequency?: number; depth?: number } | null
   rotation?:    { rotationHz?: number } | null
-  distortion?:  { sinOffset?: number; sinScale?: number; cosOffset?: number; cosScale?: number; tanOffset?: number; tanScale?: number; offset?: number; scale?: number } | null
+  distortion?:  { sinOffset?: number; sinScale?: number; cosOffset?: number; cosScale?: number; tanOffset?: number; tanScale?: number; offset?: number; scale?: number }
   channelMix?:  { leftToLeft?: number; leftToRight?: number; rightToLeft?: number; rightToRight?: number } | null
   lowPass?:     { smoothing?: number } | null
   echo?:        { delay?: number; feedback?: number; mix?: number } | null
@@ -35,18 +36,14 @@ export interface VoiceState {
   sessionId: string
 }
 
-export interface Player {
-  guildId:    string
+export interface Player extends AurisPlayer {
   sessionId:  string
-  track:      Track | null
-  volume:     number
-  paused:     boolean
-  state:      PlayerState
   voice:      VoiceState
   filters:    Filters
   // Internal
   _startedAt: number   // Date.now() when track started
   _pausedAt:  number   // Date.now() when paused (0 if not paused)
+  state:      PlayerState
 }
 
 // ─── Session ──────────────────────────────────────────────────────────────────
@@ -229,18 +226,14 @@ export class SessionManager {
     if (!session) return null
 
     if (!session.players.has(guildId)) {
-      const player: Player = {
-        guildId,
-        sessionId,
-        track:     null,
-        volume:    100,
-        paused:    false,
-        filters:   {},
-        voice:     { token: '', endpoint: '', sessionId: '' },
-        state:     { time: Date.now(), position: 0, connected: false, ping: -1 },
-        _startedAt: 0,
-        _pausedAt:  0,
-      }
+      const player = new AurisPlayer(guildId) as Player
+      player.sessionId = sessionId
+      player.filters = {}
+      player.voice = { token: '', endpoint: '', sessionId: '' }
+      player.state = { time: Date.now(), position: 0, connected: false, ping: -1 }
+      player._startedAt = 0
+      player._pausedAt = 0
+      
       session.players.set(guildId, player)
       log('info', 'SessionManager', `Player created: guild=${guildId} session=${sessionId}`)
     }

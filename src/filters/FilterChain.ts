@@ -12,6 +12,7 @@ import { applyRotation }   from './rotation.js'
 import { applyChannelMix } from './channelMix.js'
 import { applyEcho }       from './echo.js'
 import { applyReverb }     from './reverb.js'
+import { applyDistortion } from './distortion.js'
 
 import { SAMPLE_RATE, CHANNELS } from './constants.js'
 export { SAMPLE_RATE, CHANNELS }
@@ -83,6 +84,12 @@ const REGISTRY: FilterEntry[] = [
     priority: 9,
     apply:    (c, f) => applyReverb(c, f),
     isActive: f => f.reverb != null && (f.reverb.mix ?? 0) > 0,
+  },
+  {
+    name:     'distortion',
+    priority: 10,
+    apply:    (c, f) => applyDistortion(c, f),
+    isActive: f => f.distortion != null,
   },
 ]
 

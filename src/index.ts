@@ -1,8 +1,8 @@
 // src/index.ts
 
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { parse } from 'yaml'
 
 import { initLogger, log } from './utils/logger.js'
 import { SoundCloudSource } from './sources/soundcloud.js'
@@ -16,14 +16,14 @@ import TrackCache from './core/TrackCacheSQL.js'
 import TokenStore from './core/TokenStore.js'
 import type { AurisConfig, Source } from './typings/index.js'
 
-const configPath = resolve(process.cwd(), 'config.ts')
-const fallback = resolve(process.cwd(), 'config.default.ts')
+const configPath = resolve(process.cwd(), 'application.yml')
+const fallback = resolve(process.cwd(), 'application.example.yml')
 
 let config: AurisConfig
 try {
   const target = existsSync(configPath) ? configPath : fallback
-  const mod = await import(pathToFileURL(target).href) as { default: AurisConfig }
-  config = mod.default
+  const file = readFileSync(target, 'utf8')
+  config = parse(file) as AurisConfig
 } catch (err) {
   console.error('[AurisLink] Failed to load config:', err)
   process.exit(1)

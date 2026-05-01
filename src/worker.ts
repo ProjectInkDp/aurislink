@@ -14,7 +14,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fork, type ChildProcess } from 'node:child_process'
 import { parse } from 'yaml'
-import { log } from './utils/logger.js'
+import { log } from './shared/reporter.js'
 import type { AurisConfig, Source } from './typings/index.js'
 
 // ─── Message types ───────────────────────────────────────────────────────────
@@ -102,10 +102,10 @@ export async function runWorkerProcess(): Promise<void> {
   }
 
   // Lazy-load sources
-  const { SoundCloudSource } = await import('./sources/soundcloud.js')
-  const { DeezerSource }     = await import('./sources/deezer.js')
-  const { JioSaavnSource }   = await import('./sources/jiosaavn.js')
-  const { AurisSpotifySource }    = await import('./sources/spotify.js')
+  const { SoundCloudSource } = await import('./providers/soundcloud.js')
+  const { DeezerSource }     = await import('./providers/deezer.js')
+  const { JioSaavnSource }   = await import('./providers/jiosaavn.js')
+  const { AurisSpotifySource }    = await import('./providers/spotify.js')
 
   const sources = new Map<string, Source>()
 

@@ -2,7 +2,7 @@
 // 15-band biquad peaking EQ — matches Lavalink v4 spec exactly.
 // Each band: { band: 0-14, gain: -0.25..1.0 }
 
-import type { Filters } from '../core/SessionManager.js'
+import type { Filters } from '../engine/SessionManager.js'
 import { SAMPLE_RATE } from './constants.js'
 
 // Centre frequencies (Hz) for bands 0-14

@@ -2,7 +2,7 @@
 // ChannelMix — mix L/R channels into each other.
 // Matches Lavalink v4 spec exactly.
 
-import type { Filters } from '../core/SessionManager.js'
+import type { Filters } from '../engine/SessionManager.js'
 
 function clamp16(v: number): number {
   return v > 32767 ? 32767 : v < -32768 ? -32768 : v | 0

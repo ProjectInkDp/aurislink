@@ -1,4 +1,4 @@
-import type { LoadResult } from '../core/player.js';
+import type { LoadResult } from '../engine/player.js';
 
 export interface Source {
   readonly name: string

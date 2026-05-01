@@ -2,7 +2,7 @@
 // Stereo rotation (8D audio) — pans L/R continuously using a sine LFO.
 // rotationHz: rotation speed in Hz (e.g. 0.2 for slow 8D)
 
-import type { Filters } from '../core/SessionManager.js'
+import type { Filters } from '../engine/SessionManager.js'
 import { SAMPLE_RATE } from './constants.js'
 
 function clamp16(v: number): number {

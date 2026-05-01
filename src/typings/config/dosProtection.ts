@@ -1,11 +1,11 @@
-export interface DosProtectionThresholds {
+export interface GuardThresholds {
   burstRequests: number
   timeWindowMs:  number
   warnRatio?:    number
   maxEntries?:   number
 }
 
-export interface DosProtectionMitigation {
+export interface GuardMitigation {
   delayMs:             number
   blockDurationMs:     number
   backoffMultiplier?:  number
@@ -14,8 +14,8 @@ export interface DosProtectionMitigation {
 
 export interface AurisDosConfig {
   enabled:    boolean
-  thresholds: DosProtectionThresholds
-  mitigation: DosProtectionMitigation
+  thresholds: GuardThresholds
+  mitigation: GuardMitigation
   ignore?: {
     userIds?:  string[]
     guildIds?: string[]
@@ -25,7 +25,7 @@ export interface AurisDosConfig {
   trustProxy?: boolean
 }
 
-export interface DosProtectionEntry {
+export interface GuardEntry {
   count:        number
   lastReset:    number
   lastSeen:     number
@@ -33,7 +33,7 @@ export interface DosProtectionEntry {
   strikes:      number
 }
 
-export interface ApiDosProtectionResult {
+export interface ApiGuardResult {
   allowed: boolean
   status?:  number
   message?: string

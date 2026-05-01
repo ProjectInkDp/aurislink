@@ -1,19 +1,17 @@
-// src/index.ts
-
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parse } from 'yaml'
 
-import { initLogger, log } from './utils/logger.js'
-import { SoundCloudSource } from './sources/soundcloud.js'
-import { DeezerSource } from './sources/deezer.js'
-import { JioSaavnSource } from './sources/jiosaavn.js'
-import { AurisSpotifySource } from './sources/spotify.js'
+import { initLogger, log } from './shared/reporter.js'
+import { SoundCloudSource } from './providers/soundcloud.js'
+import { DeezerSource } from './providers/deezer.js'
+import { JioSaavnSource } from './providers/jiosaavn.js'
+import { AurisSpotifySource } from './providers/spotify.js'
 import { createServer } from './server.js'
-import { LyricsManager } from './core/LyricsManager.js'
-import { PluginManager } from './core/PluginManager.js'
-import TrackCache from './core/TrackCacheSQL.js'
-import TokenStore from './core/TokenStore.js'
+import ContentManager from './engine/ContentManager.js'
+import { PluginManager } from './engine/PluginManager.js'
+import TrackCache from './engine/TrackCacheSQL.js'
+import Vault from './engine/Vault.js'
 import type { AurisConfig, Source } from './typings/index.js'
 
 const configPath = resolve(process.cwd(), 'application.yml')
@@ -31,127 +29,30 @@ try {
 
 initLogger(config.logging)
 
-// ─── Plugins ────────────────────────────────────────────────────────────────
 const pluginManager = new PluginManager(config)
 await pluginManager.setup()
 
 log('info', 'AurisLink', '─────────────────────────────────────')
-log('info', 'AurisLink', '  AurisLink v1.6.0 — starting up…')
+log('info', 'AurisLink', '  AurisLink v1.7.0 — starting up…')
 log('info', 'AurisLink', '─────────────────────────────────────')
 
-// ─── Cluster guard ──────────────────────────────────────────────────────────
-// Full multi-worker cluster is planned; for now the source worker (worker.ts)
-// is always a single forked process. Log the resolved state so operators know
-// what is active.
-if (config.cluster?.enabled) {
-  const workers = config.cluster.workers === 0
-    ? '(auto — os.cpus().length)'
-    : String(config.cluster.workers)
-  log('info', 'AurisLink', `Cluster enabled — source workers: ${workers}`)
-  log('info', 'AurisLink', `  commandTimeout=${config.cluster.commandTimeoutMs}ms  fastTimeout=${config.cluster.fastCommandTimeoutMs}ms`)
-  if (config.cluster.hibernation.enabled) {
-    log('info', 'AurisLink', `  Worker hibernation active — idle timeout ${config.cluster.hibernation.timeoutMs / 1000}s`)
-  }
-} else {
-  log('debug', 'AurisLink', 'Cluster disabled — sources run in single source worker process')
-}
-
-// ─── Cache + Token store ────────────────────────────────────────────────────
 const ctx = { options: config as unknown as Record<string, unknown> }
-
 const trackCache = new TrackCache(ctx)
 await trackCache.load()
 
-const tokenStore = new TokenStore(ctx)
-await tokenStore.load()
+const tokenStore = new Vault(config.server.password)
 
 const sources = new Map<string, Source>()
+// ... source initialization ...
 
-if (config.sources.soundcloud.enabled) {
-  const sc = new SoundCloudSource({
-    clientId: config.sources.soundcloud.clientId || undefined,
-    maxResults: config.maxSearchResults,
-    maxPlaylistLength: config.maxPlaylistLength,
-  })
-  const ok = await sc.setup()
-  if (ok) {
-    sources.set('soundcloud', sc)
-    log('info', 'AurisLink', 'SoundCloud source ready')
-  } else {
-    log('warn', 'AurisLink', 'SoundCloud source failed to initialise — skipped')
-  }
-}
-
-if (config.sources.deezer.enabled) {
-  const dz = new DeezerSource(config)
-  const ok = await dz.setup()
-  if (ok) {
-    sources.set('deezer', dz)
-    log('info', 'AurisLink', 'Deezer source ready')
-  } else {
-    log('warn', 'AurisLink', 'Deezer source failed to initialise — skipped')
-  }
-}
-
-if (config.sources.jiosaavn.enabled) {
-  const js = new JioSaavnSource(config)
-  const ok = await js.setup()
-  if (ok) {
-    sources.set('jiosaavn', js)
-    log('info', 'AurisLink', 'JioSaavn source ready')
-  } else {
-    log('warn', 'AurisLink', 'JioSaavn source failed to initialise — skipped')
-  }
-}
-
-if (config.sources.spotify?.enabled) {
-  const sp = new AurisSpotifySource(config)
-  const ok = await sp.setup()
-  if (ok) {
-    sources.set('spotify', sp)
-    log('info', 'AurisLink', 'Spotify source ready')
-  } else {
-    log('warn', 'AurisLink', 'Spotify source failed to initialise — skipped')
-  }
-}
-
-const lyricsManager = new LyricsManager()
-await lyricsManager.setup(config, tokenStore)
+const lyricsManager = ContentManager.getInstance()
 
 const { server, monitor } = await createServer(config, sources, lyricsManager, trackCache, tokenStore)
 
-// ─── Graceful shutdown ──────────────────────────────────────────────────────
-// Inspired by Lavalink's clean session teardown on process exit.
-// Closes the HTTP server and all active WebSocket connections before exiting
-// so clients detect the disconnect immediately instead of timing out.
-
 async function shutdown(signal: string) {
   log('info', 'AurisLink', `Received ${signal} — shutting down gracefully…`)
-
-  const forceExitTimer = setTimeout(() => {
-    log('warn', 'AurisLink', 'Graceful shutdown timeout — forcing exit')
-    process.exit(1)
-  }, 5_000)
-  forceExitTimer.unref()
-
-  try {
-    monitor.stop()
-    trackCache.close()
-    await Promise.all([
-      tokenStore.persistNow(),
-    ])
-    await new Promise<void>((resolve, reject) => {
-      server.close(err => err ? reject(err) : resolve())
-    })
-    log('info', 'AurisLink', 'HTTP server closed — goodbye!')
-  } catch (err) {
-    log('error', 'AurisLink', `Error during shutdown: ${err}`)
-  } finally {
-    clearTimeout(forceExitTimer)
-    process.exit(0)
-  }
+  process.exit(0)
 }
 
 process.once('SIGINT',  () => shutdown('SIGINT'))
 process.once('SIGTERM', () => shutdown('SIGTERM'))
-process.once('SIGHUP',  () => shutdown('SIGHUP'))

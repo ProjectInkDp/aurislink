@@ -4,11 +4,11 @@
 // feedback: 0-1 (default 0.4)
 // mix:      wet/dry 0-1 (default 0.5)
 
-import type { Filters } from '../core/SessionManager.js'
+import type { Filters } from '../engine/SessionManager.js'
 import { SAMPLE_RATE } from './constants.js'
 
 // Extend Filters type with echo (exclusive AurisLink filter)
-declare module '../core/SessionManager.js' {
+declare module '../engine/SessionManager.js' {
   interface Filters {
     echo?: { delay?: number; feedback?: number; mix?: number } | null
   }

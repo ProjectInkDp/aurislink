@@ -29,10 +29,10 @@ export interface TokenEntry<T = unknown> {
 }
 
 /**
- * Encrypted payload serialised to disk by the TokenStore.
+ * Encrypted payload serialised to disk by the Vault.
  * @public
  */
-export interface TokenStorePayload {
+export interface VaultPayload {
   /** File format version — used for future migration. */
   version: number
 
@@ -44,10 +44,10 @@ export interface TokenStorePayload {
 }
 
 /**
- * Runtime statistics reported by the TokenStore.
+ * Runtime statistics reported by the Vault.
  * @public
  */
-export interface TokenStoreStats {
+export interface VaultStats {
   /** Total number of entries currently held in memory. */
   total: number
 

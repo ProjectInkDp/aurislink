@@ -4,7 +4,7 @@ import type { RoutePlannerConfig } from "./routePlanner.js";
 import type { ClusterConfig } from "./cluster.js";
 import type { ConnectionConfig } from "./connection.js";
 import type { AurisRateLimitConfig } from "./rateLimit.js";
-import type { PluginDefinition } from "../core/plugin.js";
+import type { PluginDefinition } from "../engine/plugin.js";
 
 export interface TlsConfig {
   enabled: boolean

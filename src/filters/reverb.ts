@@ -4,11 +4,11 @@
 // roomSize: 0-1 (default 0.5)
 // damping:  0-1 (default 0.5)
 
-import type { Filters } from '../core/SessionManager.js'
+import type { Filters } from '../engine/SessionManager.js'
 import { SAMPLE_RATE } from './constants.js'
 
 // Extend Filters with reverb (exclusive AurisLink filter)
-declare module '../core/SessionManager.js' {
+declare module '../engine/SessionManager.js' {
   interface Filters {
     reverb?: { mix?: number; roomSize?: number; damping?: number } | null
   }

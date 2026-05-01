@@ -1,4 +1,4 @@
-export * from './core/player.js';
+export * from './engine/player.js';
 export * from './sources/source.js';
 export * from './config/config.js';
 export * from './config/dosProtection.js';
@@ -8,4 +8,4 @@ export * from './config/cluster.js';
 export * from './config/connection.js';
 export * from './config/rateLimit.js';
 export * from './lyrics/lyrics.js';
-export * from './core/plugin.js';
+export * from './engine/plugin.js';

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="AurisLink Logo" width="200" />
+</p>
+
 # 🚀 AurisLink
 
 **AurisLink** is a high-performance, Lavalink-compatible audio server built for the **Auris Ecosystem**. It provides a robust and scalable solution for audio streaming, featuring a clean-room rewrite of core modules to ensure originality, performance, and technical superiority.

@@ -1,79 +1,129 @@
 // src/filters/equalizer.ts
-// 15-band biquad peaking EQ — matches Lavalink v4 spec exactly.
-// Each band: { band: 0-14, gain: -0.25..1.0 }
+// AurisLink 15-Band Parametric Equalizer
+// Implements a series of biquad peaking filters for precise frequency control.
 
-import type { Filters } from '../engine/SessionManager.js'
+import type { AudioFilters } from '../engine/SessionManager.js'
 import { SAMPLE_RATE } from './constants.js'
 
-// Centre frequencies (Hz) for bands 0-14
-const BAND_FREQS = [25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000]
+// Standard Lavalink v4 center frequencies (Hz)
+const FREQUENCY_MAP = [25, 40, 63, 100, 160, 250, 400, 630, 1000, 1600, 2500, 4000, 6300, 10000, 16000]
 
-interface BiquadState {
+/**
+ * Biquad filter coefficients and state buffers using Direct Form II.
+ */
+interface FilterNode {
+  // Coefficients
   b0: number; b1: number; b2: number
   a1: number; a2: number
-  x1L: number; x2L: number; y1L: number; y2L: number
-  x1R: number; x2R: number; y1R: number; y2R: number
+  // Delay lines (Left)
+  z1L: number; z2L: number
+  // Delay lines (Right)
+  z1R: number; z2R: number
 }
 
-function makePeakingBiquad(freq: number, gain: number, Q = 1.0): BiquadState {
-  const A  = Math.pow(10, gain / 40)
-  const w0 = 2 * Math.PI * freq / SAMPLE_RATE
-  const alpha = Math.sin(w0) / (2 * Q)
+/**
+ * Computes peaking biquad coefficients based on frequency and gain.
+ * @param frequency Center frequency in Hz
+ * @param gain Gain in dB
+ * @param bandwidth Bandwidth in octaves (default 1.0)
+ */
+function calculatePeakingNode(frequency: number, gain: number, bandwidth = 1.0): FilterNode {
+  const A = Math.pow(10, gain / 40)
+  const omega = 2 * Math.PI * frequency / SAMPLE_RATE
+  const sn = Math.sin(omega)
+  const cs = Math.cos(omega)
+  const alpha = sn * Math.sinh(Math.log(2) / 2 * bandwidth * omega / sn)
 
-  const b0 =  1 + alpha * A
-  const b1 = -2 * Math.cos(w0)
-  const b2 =  1 - alpha * A
-  const a0 =  1 + alpha / A
-  const a1 = -2 * Math.cos(w0)
-  const a2 =  1 - alpha / A
+  const b0 = 1 + alpha * A
+  const b1 = -2 * cs
+  const b2 = 1 - alpha * A
+  const a0 = 1 + alpha / A
+  const a1 = -2 * cs
+  const a2 = 1 - alpha / A
 
-  return { b0: b0/a0, b1: b1/a0, b2: b2/a0, a1: a1/a0, a2: a2/a0,
-           x1L: 0, x2L: 0, y1L: 0, y2L: 0, x1R: 0, x2R: 0, y1R: 0, y2R: 0 }
+  return {
+    b0: b0 / a0, b1: b1 / a0, b2: b2 / a0,
+    a1: a1 / a0, a2: a2 / a0,
+    z1L: 0, z2L: 0, z1R: 0, z2R: 0
+  }
 }
 
-function processBiquad(s: BiquadState, inL: number, inR: number): [number, number] {
-  const outL = s.b0 * inL + s.b1 * s.x1L + s.b2 * s.x2L - s.a1 * s.y1L - s.a2 * s.y2L
-  s.x2L = s.x1L; s.x1L = inL; s.y2L = s.y1L; s.y1L = outL
+export class Equalizer {
+  private nodes: FilterNode[] = []
+  private activeBands: number[] = new Array(15).fill(0)
 
-  const outR = s.b0 * inR + s.b1 * s.x1R + s.b2 * s.x2R - s.a1 * s.y1R - s.a2 * s.y2R
-  s.x2R = s.x1R; s.x1R = inR; s.y2R = s.y1R; s.y1R = outR
-
-  return [outL, outR]
-}
-
-function clamp16(v: number): number {
-  return v > 32767 ? 32767 : v < -32768 ? -32768 : v | 0
-}
-
-// Cache biquad states per filter config (keyed by JSON fingerprint)
-const stateCache = new WeakMap<NonNullable<Filters['equalizer']>, BiquadState[]>()
-
-function getOrBuildStates(bands: NonNullable<Filters['equalizer']>): BiquadState[] {
-  if (stateCache.has(bands)) return stateCache.get(bands)!
-  const states = BAND_FREQS.map((freq, i) => {
-    const band = bands.find(b => b.band === i)
-    return makePeakingBiquad(freq, (band?.gain ?? 0) * 40)
-  })
-  stateCache.set(bands, states)
-  return states
-}
-
-export function applyEqualizer(chunk: Buffer, filters: Filters): Buffer {
-  if (!filters.equalizer || filters.equalizer.length === 0) return chunk
-
-  const states = getOrBuildStates(filters.equalizer)
-
-  for (let i = 0; i < chunk.length; i += 4) {
-    let L = chunk.readInt16LE(i)
-    let R = chunk.readInt16LE(i + 2)
-
-    for (const s of states) {
-      ;[L, R] = processBiquad(s, L, R)
-    }
-
-    chunk.writeInt16LE(clamp16(L), i)
-    chunk.writeInt16LE(clamp16(R), i + 2)
+  constructor() {
+    this._resetNodes()
   }
 
-  return chunk
+  private _resetNodes(): void {
+    this.nodes = FREQUENCY_MAP.map(f => calculatePeakingNode(f, 0))
+  }
+
+  /**
+   * Updates the equalizer configuration.
+   * @param config The filter settings from the client.
+   */
+  update(config: AudioFilters): void {
+    const bands = config.equalizer || []
+    
+    // Reset to neutral if no bands provided
+    if (bands.length === 0) {
+      this.activeBands.fill(0)
+      this._resetNodes()
+      return
+    }
+
+    for (const entry of bands) {
+      if (entry.band >= 0 && entry.band < 15) {
+        this.activeBands[entry.band] = entry.gain
+        // Convert Lavalink gain (-0.25 to 1.0) to dB for the filter
+        const gainDb = entry.gain * 12 
+        this.nodes[entry.band] = calculatePeakingNode(FREQUENCY_MAP[entry.band], gainDb)
+      }
+    }
+  }
+
+  /**
+   * Processes a chunk of 16-bit PCM audio data.
+   * @param buffer Input PCM buffer (stereo, interleaved)
+   */
+  process(buffer: Buffer): Buffer {
+    // Skip processing if all bands are neutral
+    if (this.activeBands.every(g => g === 0)) return buffer
+
+    for (let i = 0; i < buffer.length; i += 4) {
+      let left  = buffer.readInt16LE(i)
+      let right = buffer.readInt16LE(i + 2)
+
+      for (const node of this.nodes) {
+        // Left Channel (Direct Form II)
+        const outL = node.b0 * left + node.z1L
+        node.z1L = node.b1 * left - node.a1 * outL + node.z2L
+        node.z2L = node.b2 * left - node.a2 * outL
+        left = outL
+
+        // Right Channel (Direct Form II)
+        const outR = node.b0 * right + node.z1R
+        node.z1R = node.b1 * right - node.a1 * outR + node.z2R
+        node.z2R = node.b2 * right - node.a2 * outR
+        right = outR
+      }
+
+      // Clamp and write back
+      buffer.writeInt16LE(Math.max(-32768, Math.min(32767, left)), i)
+      buffer.writeInt16LE(Math.max(-32768, Math.min(32767, right)), i + 2)
+    }
+
+    return buffer
+  }
+
+  /**
+   * Clears internal delay buffers.
+   */
+  flush(): void {
+    for (const node of this.nodes) {
+      node.z1L = node.z2L = node.z1R = node.z2R = 0
+    }
+  }
 }

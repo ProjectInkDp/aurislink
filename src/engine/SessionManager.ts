@@ -1,14 +1,17 @@
-// src/core/SessionManager.ts
-// Manages Lavalink v4 sessions, players, and graceful session recovery.
+// src/engine/SessionManager.ts
+// AurisLink Session & Player Orchestrator
+// Handles the lifecycle of Lavalink v4 sessions and their associated audio players.
 
 import { randomUUID } from 'node:crypto'
 import { log } from '../shared/reporter.js'
 import type { Track } from '../typings/index.js'
-import { Player as AurisPlayer } from '@projectinkdp/auris-player'
+import { Player as AurisCore } from '@projectinkdp/auris-player'
 
-// ─── Player state ─────────────────────────────────────────────────────────────
-
-export interface Filters {
+/**
+ * Represents the DSP filter configuration for a player.
+ * Aligned with Lavalink v4 specification.
+ */
+export interface AudioFilters {
   volume?:      number
   equalizer?:   { band: number; gain: number }[]
   karaoke?:     { level?: number; monoLevel?: number; filterBand?: number; filterWidth?: number } | null
@@ -23,251 +26,242 @@ export interface Filters {
   reverb?:      { mix?: number; roomSize?: number; damping?: number } | null
 }
 
-export interface PlayerState {
-  time:      number   // unix ms
-  position:  number   // track position ms
-  connected: boolean
-  ping:      number
+export interface PlaybackState {
+  updatedAt: number   // Epoch ms
+  position:  number   // Current offset in ms
+  active:    boolean
+  latency:   number
 }
 
-export interface VoiceState {
+export interface VoiceConnection {
   token:     string
   endpoint:  string
   sessionId: string
 }
 
-export interface Player extends AurisPlayer {
-  sessionId:  string
-  voice:      VoiceState
-  filters:    Filters
-  // Internal
-  _startedAt: number   // Date.now() when track started
-  _pausedAt:  number   // Date.now() when paused (0 if not paused)
-  state:      PlayerState
+/**
+ * Extended Player class for AurisLink internal management.
+ */
+export interface AurisPlayer extends AurisCore {
+  parentSession: string
+  voiceLink:     VoiceConnection
+  dsp:           AudioFilters
+  _tsStart:      number   // Timestamp when playback began
+  _tsPause:      number   // Timestamp when paused (0 if active)
+  liveState:     PlaybackState
 }
 
-// ─── Session ──────────────────────────────────────────────────────────────────
-
-export interface Session {
-  sessionId:        string
-  resuming:         boolean
-  resumingKey:      string | null
-  timeout:          number
-  connectedAt:      number
-  players:          Map<string, Player>
-  // Session recovery fields
-  suspended:        boolean
-  pendingEvents:    string[]
-  expiryTimer:      ReturnType<typeof setTimeout> | null
+/**
+ * A client session containing multiple players and recovery data.
+ */
+export interface AurisSession {
+  id:               string
+  isResuming:       boolean
+  recoveryKey:      string | null
+  gracePeriod:      number
+  createdAt:        number
+  registry:         Map<string, AurisPlayer>
+  isInactive:       boolean
+  backlog:          string[]
+  cleanupTask:      ReturnType<typeof setTimeout> | null
 }
-
-// ─── SessionManager ───────────────────────────────────────────────────────────
 
 export class SessionManager {
-  private sessions   = new Map<string, Session>()
-  private suspended  = new Map<string, Session>()
+  private activePool   = new Map<string, AurisSession>()
+  private standbyPool  = new Map<string, AurisSession>()
 
-  // ── Sessions ────────────────────────────────────────────────────────────────
-
-  createSession(): Session {
-    const sessionId = randomUUID()
-    const session: Session = {
-      sessionId,
-      resuming:      false,
-      resumingKey:   null,
-      timeout:       60,
-      connectedAt:   Date.now(),
-      players:       new Map(),
-      suspended:     false,
-      pendingEvents: [],
-      expiryTimer:   null,
+  /**
+   * Initializes a new session with a unique identifier.
+   */
+  openSession(): AurisSession {
+    const id = randomUUID()
+    const session: AurisSession = {
+      id,
+      isResuming:    false,
+      recoveryKey:   null,
+      gracePeriod:   60,
+      createdAt:     Date.now(),
+      registry:      new Map(),
+      isInactive:    false,
+      backlog:       [],
+      cleanupTask:   null,
     }
-    this.sessions.set(sessionId, session)
-    log('info', 'SessionManager', `Session created: ${sessionId}`)
+    this.activePool.set(id, session)
+    log('info', 'SessionManager', `New session registered: ${id}`)
     return session
   }
 
-  getSession(sessionId: string): Session | null {
-    return this.sessions.get(sessionId) ?? this.suspended.get(sessionId) ?? null
+  /**
+   * Locates a session in either the active or standby pools.
+   */
+  findSession(id: string): AurisSession | null {
+    return this.activePool.get(id) ?? this.standbyPool.get(id) ?? null
   }
-
-  deleteSession(sessionId: string): boolean {
-    const had = this.sessions.has(sessionId)
-    this.sessions.delete(sessionId)
-    if (had) log('info', 'SessionManager', `Session deleted: ${sessionId}`)
-    return had
-  }
-
-  updateSession(sessionId: string, resuming: boolean, timeout: number): Session | null {
-    const s = this.sessions.get(sessionId) ?? this.suspended.get(sessionId)
-    if (!s) return null
-    s.resuming = resuming
-    s.timeout  = timeout
-    log('debug', 'SessionManager', `Session ${sessionId} updated: resuming=${resuming}, timeout=${timeout}s`)
-    return s
-  }
-
-  getAllSessions(): Session[] {
-    return [...this.sessions.values()]
-  }
-
-  // ── Session Recovery ────────────────────────────────────────────────────────
 
   /**
-   * Suspends a session for later recovery. The session is moved to the
-   * suspended pool and a countdown starts. If the client does not reconnect
-   * within the configured timeout, the session is permanently destroyed.
+   * Removes a session and its associated resources.
    */
-  suspend(sessionId: string): boolean {
-    // Prevent double-suspend
-    if (this.suspended.has(sessionId)) {
-      log('debug', 'SessionManager', `Session ${sessionId} already suspended, skipping.`)
-      return false
-    }
+  closeSession(id: string): boolean {
+    const exists = this.activePool.has(id)
+    this.activePool.delete(id)
+    if (exists) log('info', 'SessionManager', `Session terminated: ${id}`)
+    return exists
+  }
 
-    const session = this.sessions.get(sessionId)
+  /**
+   * Updates session parameters for resumption.
+   */
+  configureResumption(id: string, enabled: boolean, timeout: number): AurisSession | null {
+    const session = this.findSession(id)
+    if (!session) return null
+    session.isResuming = enabled
+    session.gracePeriod = timeout
+    log('debug', 'SessionManager', `Session ${id} config: resume=${enabled}, timeout=${timeout}s`)
+    return session
+  }
+
+  /**
+   * Returns all currently active sessions.
+   */
+  listActive(): AurisSession[] {
+    return Array.from(this.activePool.values())
+  }
+
+  /**
+   * Moves a session to standby mode, allowing for later recovery.
+   */
+  parkSession(id: string): boolean {
+    if (this.standbyPool.has(id)) return false
+
+    const session = this.activePool.get(id)
     if (!session) return false
 
-    // Only suspend if the client opted into resuming
-    if (!session.resuming) {
-      log('debug', 'SessionManager', `Session ${sessionId} has resuming disabled, destroying immediately.`)
-      this.sessions.delete(sessionId)
+    if (!session.isResuming) {
+      log('debug', 'SessionManager', `Session ${id} not configured for resume, purging.`)
+      this.activePool.delete(id)
       return false
     }
 
-    log('info', 'SessionManager', `Suspending session ${sessionId} — client has ${session.timeout}s to reconnect.`)
+    log('info', 'SessionManager', `Parking session ${id} (Standby: ${session.gracePeriod}s)`)
 
-    this.sessions.delete(sessionId)
-    session.suspended = true
-    session.pendingEvents = []
-    this.suspended.set(sessionId, session)
+    this.activePool.delete(id)
+    session.isInactive = true
+    session.backlog = []
+    this.standbyPool.set(id, session)
 
-    // Start the expiry countdown
-    session.expiryTimer = setTimeout(() => {
-      log('info', 'SessionManager', `Session ${sessionId} expired after ${session.timeout}s without reconnection. Destroying.`)
-      this.suspended.delete(sessionId)
-      this._cleanupSession(session)
-    }, session.timeout * 1000)
+    session.cleanupTask = setTimeout(() => {
+      log('info', 'SessionManager', `Standby expired for ${id}. Cleaning up.`)
+      this.standbyPool.delete(id)
+      this._finalizePurge(session)
+    }, session.gracePeriod * 1000)
 
     return true
   }
 
   /**
-   * Attempts to recover a suspended session. Returns the session if found
-   * in the suspended pool, otherwise null. Clears the expiry timer and
-   * moves the session back to the active pool.
+   * Restores a parked session to the active pool.
    */
-  recover(sessionId: string): Session | null {
-    const session = this.suspended.get(sessionId)
+  restoreSession(id: string): AurisSession | null {
+    const session = this.standbyPool.get(id)
     if (!session) return null
 
-    log('info', 'SessionManager', `Recovering session ${sessionId} — flushing ${session.pendingEvents.length} queued event(s).`)
+    log('info', 'SessionManager', `Restoring session ${id} (Backlog: ${session.backlog.length} items)`)
 
-    // Cancel the expiry timer
-    if (session.expiryTimer) {
-      clearTimeout(session.expiryTimer)
-      session.expiryTimer = null
+    if (session.cleanupTask) {
+      clearTimeout(session.cleanupTask)
+      session.cleanupTask = null
     }
 
-    // Move back to active
-    this.suspended.delete(sessionId)
-    session.suspended = false
-    this.sessions.set(sessionId, session)
+    this.standbyPool.delete(id)
+    session.isInactive = false
+    this.activePool.set(id, session)
 
     return session
   }
 
   /**
-   * Checks whether a session is currently in the suspended pool awaiting
-   * reconnection from the client.
+   * Buffers an event for a parked session.
    */
-  isSuspended(sessionId: string): boolean {
-    return this.suspended.has(sessionId)
-  }
-
-  /**
-   * Queues a serialized event for a suspended session. Events are buffered
-   * until the client reconnects and the session is recovered.
-   */
-  queueEvent(sessionId: string, event: string): boolean {
-    const session = this.suspended.get(sessionId)
+  bufferEvent(id: string, data: string): boolean {
+    const session = this.standbyPool.get(id)
     if (!session) return false
-    session.pendingEvents.push(event)
+    session.backlog.push(data)
     return true
   }
 
   /**
-   * Drains all pending events from a recovered session and returns them.
-   * After calling this, the pending queue is empty.
+   * Retrieves and clears the event backlog for a session.
    */
-  drainPendingEvents(sessionId: string): string[] {
-    const session = this.sessions.get(sessionId)
-    if (!session || session.pendingEvents.length === 0) return []
-    const events = [...session.pendingEvents]
-    session.pendingEvents = []
-    return events
+  flushBacklog(id: string): string[] {
+    const session = this.activePool.get(id)
+    if (!session || session.backlog.length === 0) return []
+    const items = [...session.backlog]
+    session.backlog = []
+    return items
   }
 
-  /** Internal cleanup when a session expires without recovery. */
-  private _cleanupSession(session: Session): void {
-    if (session.expiryTimer) {
-      clearTimeout(session.expiryTimer)
-      session.expiryTimer = null
+  private _finalizePurge(session: AurisSession): void {
+    if (session.cleanupTask) {
+      clearTimeout(session.cleanupTask)
+      session.cleanupTask = null
     }
-    session.players.clear()
-    session.pendingEvents = []
-    log('debug', 'SessionManager', `Session ${session.sessionId} fully cleaned up.`)
+    session.registry.clear()
+    session.backlog = []
+    log('debug', 'SessionManager', `Resources released for session ${session.id}`)
   }
 
-  // ── Players ─────────────────────────────────────────────────────────────────
+  // ── Player Management ───────────────────────────────────────────────────────
 
-  getOrCreatePlayer(sessionId: string, guildId: string): Player | null {
-    const session = this.sessions.get(sessionId)
+  acquirePlayer(sessionId: string, guildId: string): AurisPlayer | null {
+    const session = this.activePool.get(sessionId)
     if (!session) return null
 
-    if (!session.players.has(guildId)) {
-      const player = new AurisPlayer(guildId) as Player
-      player.sessionId = sessionId
-      player.filters = {}
-      player.voice = { token: '', endpoint: '', sessionId: '' }
-      player.state = { time: Date.now(), position: 0, connected: false, ping: -1 }
-      player._startedAt = 0
-      player._pausedAt = 0
+    let player = session.registry.get(guildId)
+    if (!player) {
+      player = new AurisCore(guildId) as AurisPlayer
+      player.parentSession = sessionId
+      player.dsp = {}
+      player.voiceLink = { token: '', endpoint: '', sessionId: '' }
+      player.liveState = { updatedAt: Date.now(), position: 0, active: false, latency: -1 }
+      player._tsStart = 0
+      player._tsPause = 0
       
-      session.players.set(guildId, player)
-      log('info', 'SessionManager', `Player created: guild=${guildId} session=${sessionId}`)
+      session.registry.set(guildId, player)
+      log('info', 'SessionManager', `Player spawned: guild=${guildId} session=${sessionId}`)
     }
 
-    return session.players.get(guildId)!
+    return player
   }
 
-  getPlayer(sessionId: string, guildId: string): Player | null {
-    return this.sessions.get(sessionId)?.players.get(guildId) ?? null
+  fetchPlayer(sessionId: string, guildId: string): AurisPlayer | null {
+    return this.activePool.get(sessionId)?.registry.get(guildId) ?? null
   }
 
-  getAllPlayers(sessionId: string): Player[] {
-    return [...(this.sessions.get(sessionId)?.players.values() ?? [])]
+  listPlayers(sessionId: string): AurisPlayer[] {
+    return Array.from(this.activePool.get(sessionId)?.registry.values() ?? [])
   }
 
-  deletePlayer(sessionId: string, guildId: string): boolean {
-    const session = this.sessions.get(sessionId)
+  evictPlayer(sessionId: string, guildId: string): boolean {
+    const session = this.activePool.get(sessionId)
     if (!session) return false
-    const had = session.players.delete(guildId)
-    if (had) log('info', 'SessionManager', `Player deleted: guild=${guildId} session=${sessionId}`)
-    return had
+    const removed = session.registry.delete(guildId)
+    if (removed) log('info', 'SessionManager', `Player evicted: guild=${guildId} session=${sessionId}`)
+    return removed
   }
 
-  // ── Player helpers ──────────────────────────────────────────────────────────
-
-  /** Returns the current live position of a player (accounts for paused state). */
-  getPosition(player: Player): number {
-    if (!player.track || player._startedAt === 0) return 0
-    if (player.paused) return player._pausedAt > 0 ? player._pausedAt - player._startedAt : 0
-    return Math.min(Date.now() - player._startedAt, player.track.info.length)
+  /**
+   * Calculates the precise playback position.
+   */
+  computePosition(player: AurisPlayer): number {
+    if (!player.track || player._tsStart === 0) return 0
+    if (player.paused) return player._tsPause > 0 ? player._tsPause - player._tsStart : 0
+    return Math.min(Date.now() - player._tsStart, player.track.info.length)
   }
 
-  /** Serialise a player to Lavalink v4 REST format. */
-  serializePlayer(player: Player): object {
+  /**
+   * Maps internal player state to Lavalink v4 API format.
+   */
+  exportPlayer(player: AurisPlayer): object {
     return {
       guildId:  player.guildId,
       track:    player.track,
@@ -275,12 +269,12 @@ export class SessionManager {
       paused:   player.paused,
       state: {
         time:      Date.now(),
-        position:  this.getPosition(player),
-        connected: player.state.connected,
-        ping:      player.state.ping,
+        position:  this.computePosition(player),
+        connected: player.liveState.active,
+        ping:      player.liveState.latency,
       },
-      voice:   player.voice,
-      filters: player.filters,
+      voice:   player.voiceLink,
+      filters: player.dsp,
     }
   }
 }

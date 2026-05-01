@@ -10,10 +10,10 @@
 // This is intentionally minimal: one worker, one IPC channel.
 // No dynamic scaling — AurisLink is designed for single-node / Termux use.
 
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
 import { fork, type ChildProcess } from 'node:child_process'
+import { parse } from 'yaml'
 import { log } from './utils/logger.js'
 import type { AurisConfig, Source } from './typings/index.js'
 
@@ -88,14 +88,14 @@ export class WorkerClient {
 
 export async function runWorkerProcess(): Promise<void> {
   // Load config + sources (same as main, but in a separate process)
-  const configPath = resolve(process.cwd(), 'config.ts')
-  const fallback   = resolve(process.cwd(), 'config.default.ts')
+  const configPath = resolve(process.cwd(), 'application.yml')
+  const fallback   = resolve(process.cwd(), 'application.example.yml')
 
   let config: AurisConfig
   try {
     const target = existsSync(configPath) ? configPath : fallback
-    const mod = await import(pathToFileURL(target).href) as { default: AurisConfig }
-    config = mod.default
+    const file = readFileSync(target, 'utf8')
+    config = parse(file) as AurisConfig
   } catch (err) {
     process.send?.({ id: '__boot__', ok: false, error: `Config load failed: ${err}` })
     process.exit(1)

@@ -1,7 +1,10 @@
 <div align="center">
   <img src="./images/logo.png" alt="AurisLink" width="120"/>
   <h1>AurisLink</h1>
-  <p>A lightweight, Lavalink v4-compatible audio server written in TypeScript / Node.js.</p>
+  <p>A lightweight, Lavalink v4-compatible audio server written in TypeScript / Node.js.
+
+> [!WARNING]
+> **Independence Declaration:** AurisLink is an independent project. We have **no involvement, affiliation, or connection** with other projects such as NodeLink or similar TypeScript-based implementations. This project is a separate effort with its own architecture and development guidelines. Any claims to the contrary are false.</p>
 
   ![version](https://img.shields.io/badge/version-1.6.3--dev.1f93d9c-a78bfa?style=flat-square) ![node](https://img.shields.io/badge/node-20+-339933?style=flat-square&logo=node.js&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 </div>
@@ -83,7 +86,7 @@ pm2 start ecosystem.config.cjs
 
 ```sh
 docker build -t aurislink .
-docker run -p 2333:2333 -v ./config.ts:/app/config.ts aurislink
+docker run -p 2333:2333 -v ./application.yml:/app/application.yml aurislink
 ```
 
 Or with docker-compose:
@@ -162,7 +165,7 @@ wscat \
 
 ## Configuration
 
-Copy `config.default.ts` → `config.ts` and edit:
+Copy `application.example.yml` → `application.yml` and edit:
 
 | Key | Default | Description |
 |---|---|---|

@@ -1,0 +1,149 @@
+# AurisLink Configuration Example
+# Copy this file to application.yml and edit as needed.
+
+# --- Server ---
+server:
+  host: "0.0.0.0"
+  port: 2333
+  password: "youshallnotpass"
+  tls:
+    enabled: false
+    cert: "" # path to TLS certificate file
+    key: "" # path to TLS private key file
+  http2:
+    enabled: false # requires tls.enabled = true; enables HTTP/2 with HTTP/1.1 fallback
+
+# --- Logging ---
+logging:
+  level: "info" # "debug" | "info" | "warn" | "error"
+  timestamps: true
+  colors: true
+  file:
+    enabled: false
+    path: "logs" # directory for log files
+    rotation: "daily" # "daily" | "weekly" | "none"
+    ttlDays: 7 # delete logs older than N days (0 = keep forever)
+
+# --- Playback timings ---
+playerUpdateInterval: 5000 # ms between playerUpdate WebSocket events
+statsInterval: 60000 # ms between stats WebSocket broadcasts
+trackStuckThresholdMs: 10000 # ms without progress before TrackStuck fires
+zombieThresholdMs: 60000 # ms before a playerless voice connection is destroyed
+
+# --- Loading limits ---
+maxSearchResults: 10 # max tracks returned per search query
+maxPlaylistLength: 100 # max tracks loaded from a playlist or album
+
+# --- Audio filters ---
+# These are the default values applied to every new player.
+filters:
+  defaultVolume: 1.0 # 0.0 = silence | 1.0 = normal | 5.0 = max
+  equalizer: [] # [{ band: 0–14, gain: -0.25..1.0 }] — 15-band biquad EQ
+  lowPass: null # { smoothing: 1–100 } — higher = more bass cut | null = off
+  timescale: null # { speed: 1.0, pitch: 1.0, rate: 1.0 } | null = off
+  tremolo: null # { frequency: 2.0, depth: 0.5 } — amplitude LFO | null = off
+  vibrato: null # { frequency: 2.0, depth: 0.5 } — pitch LFO | null = off
+  rotation: null # { rotationHz: 0.2 } — 8D audio panning | null = off
+  channelMix: null # { leftToLeft, leftToRight, rightToLeft, rightToRight } | null = off
+  echo: null # { delay: 300, feedback: 0.4, mix: 0.5 } — AurisLink exclusive | null = off
+  reverb: null # { mix: 0.3, roomSize: 0.5, damping: 0.5 } — AurisLink exclusive | null = off
+
+# --- Route planner ---
+routePlanner:
+  enabled: false
+  ipPool: [] # e.g. ["1.2.3.4", "1.2.3.5"]
+  strategy: "RotateOnBan" # RotateOnBan | LoadBalance | NanoSwitch
+  cooldownMs: 600000 # 10 minutes — how long a banned IP stays blocked
+
+# --- Cluster ---
+cluster:
+  enabled: true
+  workers: 1 # number of source worker processes (0 = os.cpus().length)
+  commandTimeoutMs: 10000 # timeout for heavy ops like loadTracks / playlist fetch
+  fastCommandTimeoutMs: 5000 # timeout for quick player commands (play, pause, seek)
+  hibernation:
+    enabled: false # kill idle source workers to reclaim memory
+    timeoutMs: 1200000 # idle time before hibernation — 20 min
+
+# --- Connection health monitor ---
+connection:
+  logAllChecks: false # true = log every probe result, not only degraded ones
+  intervalMs: 300000 # how often to probe — 5 min
+  timeoutMs: 10000 # HTTP timeout for the probe request — 10 s
+  thresholds:
+    badMbps: 1 # below this speed → warn log
+    averageMbps: 5 # below this speed → info log (above = debug / skipped)
+  probeUrl: "https://speed.cloudflare.com/__down?bytes=1000000" # 1 MB test file
+
+# --- DoS protection ---
+dosProtection:
+  enabled: false
+  thresholds:
+    burstRequests: 100 # max requests per window per IP
+    timeWindowMs: 10000 # sliding window size (ms)
+    warnRatio: 0.8 # log a warning when this ratio of the limit is reached
+    maxEntries: 10000 # max number of tracked IPs before LRU eviction
+  mitigation:
+    delayMs: 500 # delay added to requests that exceed the warn ratio
+    blockDurationMs: 30000 # block duration when hard limit is exceeded
+    backoffMultiplier: 2 # multiply blockDurationMs on repeated violations
+    maxBlockDurationMs: 600000 # cap on backoff block duration (10 min)
+  ignore:
+    ips: [] # IPs exempt from DoS checks (e.g. your own bot host)
+    paths: [] # URL paths exempt (e.g. ['/v4/health'])
+  trustProxy: false # set true if AurisLink is behind a reverse proxy (uses X-Forwarded-For)
+
+# --- Rate limiting ---
+rateLimit:
+  enabled: true
+  trustProxy: false # set true if behind a reverse proxy (uses X-Forwarded-For)
+  maxEntries: 8000 # max tracked entries before LRU eviction
+  global:
+    maxRequests: 2000 # max requests across all clients combined
+    windowMs: 60000 # 1 minute
+  perIp:
+    maxRequests: 120 # max requests per client IP
+    windowMs: 60000 # 1 minute
+  perUserId:
+    maxRequests: 60 # max requests per User-Id header
+    windowMs: 60000 # 1 minute
+  perGuildId:
+    maxRequests: 30 # max requests per Guild-Id (from player URL)
+    windowMs: 60000 # 1 minute
+  ignorePaths: ["/v4/health", "/v4/metrics", "/v4/version"]
+
+# --- Lyrics providers ---
+lyrics:
+  yandexmusic:
+    accessToken: "" # Yandex Music OAuth2 token (optional)
+
+# --- Sources ---
+sources:
+  soundcloud:
+    enabled: true
+    clientId: "" # leave empty for auto-detection from soundcloud.com
+  deezer:
+    enabled: false
+    arl: "" # your Deezer ARL cookie — enables full audio streams
+    decryptionKey: "" # 16-char Blowfish key — required alongside arl
+  jiosaavn:
+    enabled: false
+    playlistLoadLimit: 50 # max tracks loaded from a JioSaavn playlist/album
+    artistLoadLimit: 20 # max tracks loaded from a JioSaavn artist page
+    secretKey: "38346591" # DES/ECB decryption key — leave as default
+    proxy:
+      url: "" # HTTP/HTTPS proxy URL (useful if hosted outside India)
+      username: "" # optional proxy username
+      password: "" # optional proxy password
+  lastfm:
+    apiKey: "" # Last.fm API key — enables listeners/playcount in /v4/meaning
+  spotify:
+    enabled: false
+    market: "US" # ISO 3166-1 alpha-2 country code
+    playlistLoadLimit: 100 # max tracks from a playlist
+    albumLoadLimit: 50 # max tracks from an album
+    preferAnonymousToken: true
+    clientId: ""
+    clientSecret: ""
+    customTokenEndpoint: ""
+    sp_dc: ""

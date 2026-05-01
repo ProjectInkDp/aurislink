@@ -9,7 +9,7 @@ services:
     ports:
       - "2333:2333"
     volumes:
-      - ./config.ts:/app/config.ts
+      - ./application.yml:/app/application.yml
       - ./logs:/app/logs
     environment:
       # ── Server ──────────────────────────────────────────────────────────────

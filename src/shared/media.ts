@@ -134,3 +134,55 @@ export function decodeTrack(encoded: string): TrackInfo {
     isSeekable: true, // set by source after decode if needed
   }
 }
+
+// ─── ICY Metadata Support (Exclusive AurisLink Feature) ───────────────────────
+
+import http from 'node:http'
+import https from 'node:https'
+
+/**
+ * Extracts ICY metadata (StreamTitle) from a live HTTP stream.
+ * This allows AurisLink to show real-time song titles for radio stations.
+ */
+export async function fetchIcyMetadata(url: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const client = url.startsWith('https') ? https : http
+    const req = client.get(url, { headers: { 'Icy-MetaData': '1' } }, (res) => {
+      const interval = parseInt(res.headers['icy-metaint'] as string)
+      if (isNaN(interval)) {
+        res.destroy()
+        return resolve(null)
+      }
+
+      let bytesRead = 0
+      res.on('data', (chunk: Buffer) => {
+        bytesRead += chunk.length
+        if (bytesRead >= interval) {
+          const metaSizeByte = chunk[interval - (bytesRead - chunk.length)]
+          if (metaSizeByte === undefined) return
+
+          const metaSize = metaSizeByte * 16
+          if (metaSize > 0) {
+            const metaData = chunk.subarray(
+              interval - (bytesRead - chunk.length) + 1,
+              interval - (bytesRead - chunk.length) + 1 + metaSize
+            ).toString('utf8')
+            
+            const match = metaData.match(/StreamTitle='(.*?)';/)
+            res.destroy()
+            resolve(match ? match[1] : null)
+          } else {
+            res.destroy()
+            resolve(null)
+          }
+        }
+      })
+    })
+
+    req.on('error', () => resolve(null))
+    req.setTimeout(5000, () => {
+      req.destroy()
+      resolve(null)
+    })
+  })
+}

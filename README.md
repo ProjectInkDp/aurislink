@@ -3,7 +3,7 @@
   <h1>AurisLink</h1>
   <p>A lightweight, Lavalink v4-compatible audio server written in TypeScript / Node.js.</p>
 
-  ![version](https://img.shields.io/badge/version-1.6.1--dev-a78bfa?style=flat-square) ![node](https://img.shields.io/badge/node-20+-339933?style=flat-square&logo=node.js&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)
+  ![version](https://img.shields.io/badge/version-1.6.3--dev.1f93d9c-a78bfa?style=flat-square) ![node](https://img.shields.io/badge/node-20+-339933?style=flat-square&logo=node.js&logoColor=white) ![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 </div>
 
 AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.dev/api/rest), so any existing Lavalink client (Shoukaku, Lavalink.js, Magmastream, etc.) connects without changes.
@@ -21,7 +21,7 @@ AurisLink speaks the [Lavalink v4 REST + WebSocket protocol](https://lavalink.de
 - **Spotify** — anonymous TOTP auth (no credentials needed), OAuth2, custom token endpoint, recommendations (`sprec:`), ISRC-first stream resolution, album/playlist/artist loading
 - **Lyrics** — synced + plain text, SSE real-time stream; providers: LRCLib, Genius, Deezer, Musixmatch, Letras.mus.br, Yandex Music
 - **Track meaning** — bio, tags, year, listener count via Wikipedia + MusicBrainz + Last.fm
-- **Audio filters** — equalizer, timescale, tremolo, vibrato, rotation, channelMix, lowPass, echo, reverb
+- **Audio filters** — equalizer, timescale, tremolo, vibrato, rotation, channelMix, lowPass, echo, reverb, distortion
 - **HTTP/2** — with TLS and HTTP/1.1 fallback
 - **Native TLS** — HTTPS out of the box
 - **Prometheus metrics** at `/v4/metrics`

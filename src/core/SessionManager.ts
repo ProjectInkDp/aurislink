@@ -16,7 +16,7 @@ export interface Filters {
   tremolo?:     { frequency?: number; depth?: number }
   vibrato?:     { frequency?: number; depth?: number } | null
   rotation?:    { rotationHz?: number } | null
-  distortion?:  { sinOffset?: number; sinScale?: number; cosOffset?: number; cosScale?: number; tanOffset?: number; tanScale?: number; offset?: number; scale?: number } | null
+  distortion?:  { sinOffset?: number; sinScale?: number; cosOffset?: number; cosScale?: number; tanOffset?: number; tanScale?: number; offset?: number; scale?: number }
   channelMix?:  { leftToLeft?: number; leftToRight?: number; rightToLeft?: number; rightToRight?: number } | null
   lowPass?:     { smoothing?: number } | null
   echo?:        { delay?: number; feedback?: number; mix?: number } | null

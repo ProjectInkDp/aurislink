@@ -1,6 +1,6 @@
 // src/core/ConnectionMonitor.ts
 // Periodically probes outbound connectivity and logs the result.
-// Inspired by NodeLink's connection health check — adapted for AurisLink's
+// AurisLink connection health monitoring system — optimized for high-performance
 // single-process TypeScript architecture (no cluster overhead here).
 
 import http  from 'node:http'

@@ -1,7 +1,7 @@
 // src/sources/soundcloud.ts
 // AurisLink SoundCloud source.
 // Zero config required — client_id is auto-detected from the SoundCloud web app.
-// Improvements over NodeLink:
+// Improvements over initial research:
 //   • Single-pass asset scraping (fetches all candidate assets in parallel, stops at first hit)
 //   • Automatic client_id refresh on 401 instead of requiring restart
 //   • In-memory URL cache with expiry check (no external credential manager needed)

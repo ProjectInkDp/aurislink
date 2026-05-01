@@ -5,7 +5,7 @@
 // Each event fires when the current playback position crosses a lyric timestamp.
 // The stream closes automatically when the track ends or the player is destroyed.
 //
-// AurisLink-exclusive — inspired by NodeLink's lyrics subscribe concept,
+// AurisLink-exclusive — inspired by initial research's lyrics subscribe concept,
 // but implemented from scratch with a simpler interval-based approach.
 
 import type http from 'node:http'

@@ -1,6 +1,6 @@
 // src/api/metrics.ts
 // GET /v4/metrics — Prometheus-compatible plain-text metrics endpoint.
-// Inspired by NodeLink's production monitoring approach.
+// Inspired by initial research's production monitoring approach.
 
 import type http from 'node:http'
 import type { SessionManager } from '../engine/SessionManager.js'

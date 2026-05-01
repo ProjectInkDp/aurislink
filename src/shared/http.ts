@@ -1,6 +1,6 @@
 // src/utils/http.ts
 // HTTP/1.1-only client using Node's native http/https modules.
-// Mirrors NodeLink's approach: real browser User-Agent, br/gzip decompression,
+// Mirrors initial research's approach: real browser User-Agent, br/gzip decompression,
 // redirect following, and no HTTP/2 — which SoundCloud requires for scraping.
 
 import http from 'node:http'

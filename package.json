@@ -1,6 +1,6 @@
 {
   "name": "aurislink",
-  "version": "1.9.0",
+  "version": "1.9.0-dev.f451505",
   "description": "Lavalink v4-compatible audio server in Node.js — SoundCloud + Deezer.",
   "license": "MIT",
   "type": "module",

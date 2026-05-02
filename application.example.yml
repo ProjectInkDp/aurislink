@@ -147,3 +147,8 @@ sources:
     clientSecret: ""
     customTokenEndpoint: ""
     sp_dc: ""
+  applemusic:
+    enabled: false
+    market: "US" # ISO 3166-1 alpha-2 country code
+    playlistLoadLimit: 100
+    albumLoadLimit: 50

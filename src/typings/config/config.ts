@@ -96,5 +96,11 @@ export interface AurisConfig {
       preferAnonymousToken?: boolean
       sp_dc?:                string
     }
+    applemusic?: {
+      enabled: boolean
+      market?: string
+      playlistLoadLimit?: number
+      albumLoadLimit?: number
+    }
   }
 }

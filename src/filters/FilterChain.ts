@@ -1,7 +1,7 @@
 // src/filters/FilterChain.ts
 // AurisLink filter pipeline — applies enabled filters in priority order.
 
-import type { Filters } from '../engine/SessionManager.js'
+import type { AudioFilters as Filters } from '../engine/SessionManager.js'
 import { applyVolume }     from './volume.js'
 import { applyEqualizer }  from './equalizer.js'
 import { applyLowPass }    from './lowPass.js'

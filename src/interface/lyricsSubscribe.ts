@@ -46,7 +46,7 @@ export async function handleLyricsSubscribe(
   guildId: string,
   sm: SessionManager,
 ): Promise<void> {
-  const player = sm.getPlayer(sessionId, guildId)
+  const player = sm.fetchPlayer(sessionId, guildId)
   if (!player) return sendError(res, 404, 'Not Found', 'Player not found')
 
   const encoded = player.track?.encoded ?? null
@@ -86,7 +86,7 @@ export async function handleLyricsSubscribe(
   let lastSentIndex = -1
 
   const interval = setInterval(() => {
-    const currentPlayer = sm.getPlayer(sessionId, guildId)
+    const currentPlayer = sm.fetchPlayer(sessionId, guildId)
 
     // Stop if player gone or track changed
     if (!currentPlayer || currentPlayer.track?.encoded !== encoded) {
@@ -97,9 +97,7 @@ export async function handleLyricsSubscribe(
     }
 
     // Calculate current position
-    const pos = currentPlayer.paused
-      ? currentPlayer.state.position
-      : currentPlayer.state.position + (Date.now() - currentPlayer.state.time)
+    const pos = sm.computePosition(currentPlayer)
 
     // Find all lines that should have fired by now
     for (let i = lastSentIndex + 1; i < lines.length; i++) {

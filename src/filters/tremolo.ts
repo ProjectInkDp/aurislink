@@ -2,7 +2,7 @@
 // Tremolo — modulates amplitude with a sine LFO.
 // frequency: Hz (default 2.0), depth: 0-1 (default 0.5)
 
-import type { Filters } from '../engine/SessionManager.js'
+import type { AudioFilters as Filters } from '../engine/SessionManager.js'
 import { SAMPLE_RATE } from './constants.js'
 
 function clamp16(v: number): number {

@@ -127,3 +127,15 @@ export class Equalizer {
     }
   }
 }
+
+const eqInstanceMap = new WeakMap<AudioFilters, Equalizer>()
+
+export function applyEqualizer(chunk: Buffer, filters: AudioFilters): Buffer {
+  let eq = eqInstanceMap.get(filters)
+  if (!eq) {
+    eq = new Equalizer()
+    eq.update(filters)
+    eqInstanceMap.set(filters, eq)
+  }
+  return eq.process(chunk)
+}

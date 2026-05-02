@@ -31,7 +31,7 @@ export async function createServer(
   }
 
   const server = http.createServer(handler)
-  wsm.attach(server)
+  wsm.mount(server)
 
   const monitor = new ConnectionMonitor(config.connection)
   monitor.start()

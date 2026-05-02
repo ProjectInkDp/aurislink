@@ -122,7 +122,7 @@ export async function handleLyrics(
   guildId: string,
   sessions: SessionManager
 ) {
-  const player = sessions.getPlayer(sessionId, guildId)
+  const player = sessions.fetchPlayer(sessionId, guildId)
   if (!player) return sendError(res, 404, 'Not Found', 'Player not found')
 
   const encoded = player.track?.encoded ?? null

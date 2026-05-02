@@ -8,7 +8,8 @@ import { DeezerSource } from './providers/deezer.js'
 import { JioSaavnSource } from './providers/jiosaavn.js'
 import { AurisSpotifySource } from './providers/spotify.js'
 import { AppleMusicSource } from './providers/applemusic.js'
-import { YoutubeMusicSource } from './providers/youtube.js'
+import { YoutubeSource } from './providers/youtube/youtube.js'
+import { YoutubeMusicSource } from './providers/youtube/music.js'
 import { createServer } from './server.js'
 import ContentManager from './engine/ContentManager.js'
 import { PluginManager } from './engine/PluginManager.js'
@@ -62,8 +63,11 @@ const am = new AppleMusicSource(config)
 if (await am.setup()) sources.set('applemusic', am)
 
 if (config.sources.youtube?.enabled) {
-  const yt = new YoutubeMusicSource()
+  const yt = new YoutubeSource()
   if (await yt.setup()) sources.set('youtube', yt)
+  
+  const ytm = new YoutubeMusicSource()
+  if (await ytm.setup()) sources.set('ytmusic', ytm)
 }
 
 const lyricsManager = ContentManager.getInstance()

@@ -1,7 +1,7 @@
 import { httpGet, httpPostJson } from '../shared/http.js'
 import { log } from '../shared/reporter.js'
 
-export type InnerTubeClientType = 'WEB' | 'WEB_REMIX' | 'ANDROID' | 'IOS' | 'TV'
+export type InnerTubeClientType = 'WEB' | 'WEB_REMIX' | 'ANDROID' | 'ANDROID_MUSIC' | 'IOS' | 'TVHTML5' | 'TVHTML5_SIMPLY'
 
 export interface InnerTubeContext {
   apiKey: string
@@ -35,10 +35,18 @@ export class InnerTubeClient {
       const clientVersionMatch = res.body.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/)
 
       if (apiKeyMatch && visitorDataMatch) {
+        let version = clientVersionMatch ? clientVersionMatch[1]! : '2.20240501.01.00'
+        
+        // Versões fixas baseadas no plugin do Lavalink para clientes móveis/TV
+        if (this._type === 'ANDROID') version = '19.44.38'
+        if (this._type === 'ANDROID_MUSIC') version = '7.27.52'
+        if (this._type === 'TVHTML5') version = '7.20250319.10.00'
+        if (this._type === 'WEB_REMIX') version = '1.20260428.11.00'
+
         this._context = {
           apiKey: apiKeyMatch[1]!,
           visitorData: visitorDataMatch[1]!,
-          clientVersion: clientVersionMatch ? clientVersionMatch[1]! : (this._type === 'WEB_REMIX' ? '1.20260428.11.00' : '2.20240501.01.00')
+          clientVersion: version
         }
         this._lastRefresh = Date.now()
         log('info', `InnerTube[${this._type}]`, 'Tokens refreshed successfully.')
@@ -48,11 +56,34 @@ export class InnerTubeClient {
     }
   }
 
+  private _getUserAgent(type: InnerTubeClientType, version: string): string {
+    switch (type) {
+      case 'ANDROID': return `com.google.android.youtube/${version} (Linux; U; Android 11) gzip`
+      case 'ANDROID_MUSIC': return `com.google.android.apps.youtube.music/${version} (Linux; U; Android 11) gzip`
+      case 'TVHTML5': return 'Mozilla/5.0 (ChromiumStylePlatform) Cobalt/Version'
+      case 'WEB_REMIX': return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      default: return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+  }
+
+  private _getClientCode(type: InnerTubeClientType): number {
+    switch (type) {
+      case 'WEB': return 1
+      case 'ANDROID': return 3
+      case 'IOS': return 5
+      case 'TVHTML5': return 7
+      case 'ANDROID_MUSIC': return 21
+      case 'WEB_REMIX': return 67
+      default: return 1
+    }
+  }
+
   async request(endpoint: string, payload: any): Promise<any> {
     const ctx = await this.getContext()
     if (!ctx) return null
 
     const url = `https://www.youtube.com/youtubei/v1/${endpoint}?key=${ctx.apiKey}`
+    const userAgent = this._getUserAgent(this._type, ctx.clientVersion)
     const fullPayload = {
       context: {
         client: {
@@ -60,13 +91,21 @@ export class InnerTubeClient {
           clientVersion: ctx.clientVersion,
           hl: 'en',
           gl: 'US',
-          visitorData: ctx.visitorData
+          visitorData: ctx.visitorData,
+          ...(this._type.startsWith('ANDROID') ? { androidSdkVersion: 30 } : {})
         }
       },
       ...payload
     }
 
-    const res = await httpPostJson(url, fullPayload)
+    const res = await httpPostJson(url, fullPayload, {
+      headers: {
+        'User-Agent': userAgent,
+        'X-Youtube-Client-Name': this._getClientCode(this._type).toString(),
+        'X-Youtube-Client-Version': ctx.clientVersion
+      }
+    })
+
     if (!res || res.status !== 200) return null
     try {
       return JSON.parse(res.body)

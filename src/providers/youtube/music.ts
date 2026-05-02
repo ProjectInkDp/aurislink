@@ -1,14 +1,20 @@
 import { InnerTubeClient } from '../../clients/innertube.js'
 import { encodeTrack } from '../../shared/media.js'
+import { log } from '../../shared/reporter.js'
 import type { LoadResult, Source, Track, TrackInfo } from '../../typings/index.js'
 
 export class YoutubeMusicSource implements Source {
   public readonly name = 'ytmusic'
   public readonly searchPrefixes = ['ytmsearch']
-  private _client = new InnerTubeClient('WEB_REMIX')
+  
+  // Cliente principal Web Remix e cliente Android Music para bypass
+  private _webClient = new InnerTubeClient('WEB_REMIX')
+  private _androidClient = new InnerTubeClient('ANDROID_MUSIC')
 
   async setup(): Promise<boolean> {
-    return !!(await this._client.getContext())
+    const webOk = !!(await this._webClient.getContext())
+    const androidOk = !!(await this._androidClient.getContext())
+    return webOk || androidOk
   }
 
   accepts(url: string): boolean {
@@ -19,7 +25,13 @@ export class YoutubeMusicSource implements Source {
     const videoId = this._extractVideoId(url)
     if (!videoId) return _empty()
 
-    const data = await this._client.request('player', { videoId })
+    // Tenta carregar via Web primeiro, se falhar tenta via Android
+    let data = await this._webClient.request('player', { videoId })
+    if (!data || data.playabilityStatus?.status !== 'OK') {
+      log('warn', 'YouTubeMusic', `Web Player failed for ${videoId}, trying Android...`)
+      data = await this._androidClient.request('player', { videoId })
+    }
+
     if (!data || data.playabilityStatus?.status !== 'OK') return _empty()
 
     const v = data.videoDetails
@@ -44,7 +56,8 @@ export class YoutubeMusicSource implements Source {
   }
 
   async search(query: string): Promise<LoadResult> {
-    const data = await this._client.request('search', { query })
+    // Busca sempre via Web Remix para melhores resultados de metadados
+    const data = await this._webClient.request('search', { query })
     if (!data) return _empty()
 
     const tracks: Track[] = []

@@ -1,14 +1,20 @@
 import { InnerTubeClient } from '../../clients/innertube.js'
 import { encodeTrack } from '../../shared/media.js'
+import { log } from '../../shared/reporter.js'
 import type { LoadResult, Source, Track, TrackInfo } from '../../typings/index.js'
 
 export class YoutubeSource implements Source {
   public readonly name = 'youtube'
   public readonly searchPrefixes = ['ytsearch']
-  private _client = new InnerTubeClient('WEB')
+  
+  // Cliente principal Web e cliente TVHTML5 para bypass de restrições
+  private _webClient = new InnerTubeClient('WEB')
+  private _tvClient = new InnerTubeClient('TVHTML5')
 
   async setup(): Promise<boolean> {
-    return !!(await this._client.getContext())
+    const webOk = !!(await this._webClient.getContext())
+    const tvOk = !!(await this._tvClient.getContext())
+    return webOk || tvOk
   }
 
   accepts(url: string): boolean {
@@ -19,7 +25,13 @@ export class YoutubeSource implements Source {
     const videoId = this._extractVideoId(url)
     if (!videoId) return _empty()
 
-    const data = await this._client.request('player', { videoId })
+    // Tenta carregar via Web primeiro, se falhar (ex: restrição de idade), tenta via TV
+    let data = await this._webClient.request('player', { videoId })
+    if (!data || data.playabilityStatus?.status !== 'OK') {
+      log('warn', 'YouTube', `Web Player failed for ${videoId}, trying TVHTML5 bypass...`)
+      data = await this._tvClient.request('player', { videoId })
+    }
+
     if (!data || data.playabilityStatus?.status !== 'OK') return _empty()
 
     const v = data.videoDetails
@@ -44,7 +56,7 @@ export class YoutubeSource implements Source {
   }
 
   async search(query: string): Promise<LoadResult> {
-    const data = await this._client.request('search', { query })
+    const data = await this._webClient.request('search', { query })
     if (!data) return _empty()
 
     const tracks: Track[] = []

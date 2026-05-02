@@ -8,9 +8,6 @@
 
 **AurisLink** is a high-performance, Lavalink-compatible audio server built for the **Auris Ecosystem**. It provides a robust and scalable solution for audio streaming, featuring a clean-room rewrite of core modules to ensure originality, performance, and technical superiority.
 
-> [!IMPORTANT]
-> **Independence Declaration:** AurisLink is an independent project. We have **no involvement, affiliation, or connection** with other projects. This project is a separate effort with its own architecture, exclusive features, and development guidelines.
-
 ## 🏗️ Architecture
 
 The project has been deeply restructured to follow a modern and modular architecture:

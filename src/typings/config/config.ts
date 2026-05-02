@@ -102,5 +102,8 @@ export interface AurisConfig {
       playlistLoadLimit?: number
       albumLoadLimit?: number
     }
+    youtube?: {
+      enabled: boolean
+    }
   }
 }

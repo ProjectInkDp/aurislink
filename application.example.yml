@@ -152,3 +152,5 @@ sources:
     market: "US" # ISO 3166-1 alpha-2 country code
     playlistLoadLimit: 100
     albumLoadLimit: 50
+  youtube:
+    enabled: true # enables YouTube Music search via InnerTube (auth-less)

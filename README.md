@@ -43,5 +43,9 @@ npm start
 
 Copy `application.example.yml` to `application.yml` and configure your settings. The server defaults to port `2333`.
 
+## 🤝 Credits & Inspiration
+
+AurisLink was originally inspired by the research and concepts found in the **NodeLink** project. We acknowledge their contribution to the TypeScript audio server ecosystem. While AurisLink has evolved into a completely independent implementation with its own architecture and exclusive features, we respect the pioneering work of the NodeLink maintainers.
+
 ---
 *Proudly maintained by **ProjectInkDp***

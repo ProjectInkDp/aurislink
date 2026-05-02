@@ -15,8 +15,8 @@
 //   3. Mobile Web Player with sp_dc cookie
 
 import type { Source, LoadResult, Track, TrackInfo, AurisConfig } from '../typings/index.js'
-import { getSpotifyToken, getMobileToken, configureSpotifyAuth, getAurisLocalToken } from '../shared/spotifyAuth.js'
-import { httpGet, httpGetJson } from '../shared/http.js'
+import { getSpotifyToken, getMobileToken, configureSpotifyAuth, getAurisLocalToken, getClientToken, AURIS_UA } from '../shared/spotifyAuth.js'
+import { httpGet, httpGetJson, httpPostJson } from '../shared/http.js'
 import { log } from '../shared/reporter.js'
 import { encodeTrack } from '../shared/media.js'
 
@@ -132,6 +132,7 @@ export class AurisSpotifySource implements Source {
   private readonly albumLimit:    number
   private readonly allowLocal:    boolean
   private readonly allowExplicit: boolean
+  private clientToken:            string | null = null
 
   constructor(config: AurisConfig) {
     const sp = config.sources.spotify ?? { enabled: false }
@@ -450,18 +451,26 @@ export class AurisSpotifySource implements Source {
 
   // Runs a GraphQL persisted query against the Pathfinder API.
   private async _gqlRequest<T>(op: GQLOp, variables: Record<string, unknown>, token: string, retry = 0): Promise<T | null> {
-    const res = await httpGet(AURIS_PATHFINDER, {
-      method: 'POST',
+    if (!this.clientToken) {
+      const { clientId } = await getSpotifyToken()
+      this.clientToken = await getClientToken(clientId || 'd8a5ed1b290d47838aed41a97b2cb723')
+    }
+
+    const res = await httpPostJson(AURIS_PATHFINDER, {
+      variables,
+      operationName: op.name,
+      extensions: { persistedQuery: { version: 1, sha256Hash: op.hash } }
+    }, {
       headers: {
-        Authorization:        `Bearer ${token}`,
-        'Content-Type':       'application/json; charset=utf-8',
-        Accept:               'application/json',
+        'Authorization':      `Bearer ${token}`,
+        'client-token':       this.clientToken ?? '',
+        'User-Agent':         AURIS_UA,
         'Accept-Language':    'en-US,en;q=0.9',
         'App-Platform':       'WebPlayer',
         'Spotify-App-Version': '1.2.87.221.ge160d899',
-        Referer:              'https://open.spotify.com/',
-      },
-      body: JSON.stringify({ variables, operationName: op.name, extensions: { persistedQuery: { version: 1, sha256Hash: op.hash } } })
+        'Origin':             'https://open.spotify.com',
+        'Referer':            'https://open.spotify.com/',
+      }
     })
     if (!res) return null
 

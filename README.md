@@ -9,7 +9,7 @@
 **AurisLink** is a high-performance, Lavalink-compatible audio server built for the **Auris Ecosystem**. It provides a robust and scalable solution for audio streaming, featuring a clean-room rewrite of core modules to ensure originality, performance, and technical superiority.
 
 > [!IMPORTANT]
-> **Independence Declaration:** AurisLink is an independent project. We have **no involvement, affiliation, or connection** with other projects such as NodeLink or similar TypeScript-based implementations. This project is a separate effort with its own architecture, exclusive features, and development guidelines.
+> **Independence Declaration:** AurisLink is an independent project. We have **no involvement, affiliation, or connection** with other projects. This project is a separate effort with its own architecture, exclusive features, and development guidelines.
 
 ## 🏗️ Architecture
 
@@ -45,10 +45,6 @@ npm start
 ## 📜 Configuration
 
 Copy `application.example.yml` to `application.yml` and configure your settings. The server defaults to port `2333`.
-
-## 🤝 Credits & Inspiration
-
-AurisLink was originally inspired by the research and concepts found in the **NodeLink** project. We acknowledge their contribution to the TypeScript audio server ecosystem. While AurisLink has evolved into a completely independent implementation with its own architecture and exclusive features, we respect the pioneering work of the NodeLink maintainers.
 
 ---
 *Proudly maintained by **ProjectInkDp***

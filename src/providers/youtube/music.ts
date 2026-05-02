@@ -1,20 +1,31 @@
-import { InnerTubeClient } from '../../clients/innertube.js'
+import { InnerTubeClient, type InnerTubeClientType } from '../../clients/innertube.js'
 import { encodeTrack } from '../../shared/media.js'
 import { log } from '../../shared/reporter.js'
-import type { LoadResult, Source, Track, TrackInfo } from '../../typings/index.js'
+import type { LoadResult, Source, Track, TrackInfo, AurisConfig } from '../../typings/index.js'
 
 export class YoutubeMusicSource implements Source {
   public readonly name = 'ytmusic'
   public readonly searchPrefixes = ['ytmsearch']
   
-  // Cliente principal Web Remix e cliente Android Music para bypass
-  private _webClient = new InnerTubeClient('WEB_REMIX')
-  private _androidClient = new InnerTubeClient('ANDROID_MUSIC')
+  private _clients: InnerTubeClient[] = []
+  private _allowFallback: boolean
+
+  constructor(config: AurisConfig) {
+    const ytm = config.sources.ytmusic ?? { enabled: false }
+    const clientTypes = (ytm.clients as InnerTubeClientType[]) || ['WEB_REMIX', 'ANDROID_MUSIC']
+    this._allowFallback = ytm.allowFallback ?? true
+
+    for (const type of clientTypes) {
+      this._clients.push(new InnerTubeClient(type))
+    }
+  }
 
   async setup(): Promise<boolean> {
-    const webOk = !!(await this._webClient.getContext())
-    const androidOk = !!(await this._androidClient.getContext())
-    return webOk || androidOk
+    let anyOk = false
+    for (const client of this._clients) {
+      if (await client.getContext()) anyOk = true
+    }
+    return anyOk
   }
 
   accepts(url: string): boolean {
@@ -25,39 +36,43 @@ export class YoutubeMusicSource implements Source {
     const videoId = this._extractVideoId(url)
     if (!videoId) return _empty()
 
-    // Tenta carregar via Web primeiro, se falhar tenta via Android
-    let data = await this._webClient.request('player', { videoId })
-    if (!data || data.playabilityStatus?.status !== 'OK') {
-      log('warn', 'YouTubeMusic', `Web Player failed for ${videoId}, trying Android...`)
-      data = await this._androidClient.request('player', { videoId })
+    for (const client of this._clients) {
+      const data = await client.request('player', { videoId })
+      if (data && data.playabilityStatus?.status === 'OK') {
+        const v = data.videoDetails
+        const info: TrackInfo = {
+          identifier: v.videoId,
+          isSeekable: true,
+          author: v.author,
+          length: parseInt(v.lengthSeconds) * 1000,
+          isStream: v.isLiveContent || false,
+          position: 0,
+          title: v.title,
+          uri: `https://music.youtube.com/watch?v=${v.videoId}`,
+          artworkUrl: v.thumbnail?.thumbnails?.pop()?.url || null,
+          isrc: null,
+          sourceName: 'ytmusic'
+        }
+
+        return {
+          loadType: 'track',
+          data: { encoded: encodeTrack(info), info, pluginInfo: {} }
+        }
+      }
+
+      if (!this._allowFallback) break
+      log('warn', 'YouTubeMusic', `Client failed for ${videoId}, trying next...`)
     }
 
-    if (!data || data.playabilityStatus?.status !== 'OK') return _empty()
-
-    const v = data.videoDetails
-    const info: TrackInfo = {
-      identifier: v.videoId,
-      isSeekable: true,
-      author: v.author,
-      length: parseInt(v.lengthSeconds) * 1000,
-      isStream: v.isLiveContent || false,
-      position: 0,
-      title: v.title,
-      uri: `https://music.youtube.com/watch?v=${v.videoId}`,
-      artworkUrl: v.thumbnail?.thumbnails?.pop()?.url || null,
-      isrc: null,
-      sourceName: 'ytmusic'
-    }
-
-    return {
-      loadType: 'track',
-      data: { encoded: encodeTrack(info), info, pluginInfo: {} }
-    }
+    return _empty()
   }
 
   async search(query: string): Promise<LoadResult> {
-    // Busca sempre via Web Remix para melhores resultados de metadados
-    const data = await this._webClient.request('search', { query })
+    // Busca sempre usa o primeiro cliente configurado (geralmente WEB_REMIX)
+    const client = this._clients[0]
+    if (!client) return _empty()
+
+    const data = await client.request('search', { query })
     if (!data) return _empty()
 
     const tracks: Track[] = []

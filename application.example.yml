@@ -15,7 +15,7 @@ server:
 
 # --- Logging ---
 logging:
-  level: "info" # "debug" | "info" | "warn" | "error"
+  level: "info" # "debug" | "info" # "debug" | "info" | "warn" | "error"
   timestamps: true
   colors: true
   file:
@@ -153,4 +153,10 @@ sources:
     playlistLoadLimit: 100
     albumLoadLimit: 50
   youtube:
-    enabled: true # enables YouTube Music search via InnerTube (auth-less)
+    enabled: true # enables YouTube search via InnerTube
+    clients: ["WEB", "TVHTML5", "ANDROID"] # preferred clients in order
+    allowFallback: true # automatically try next client if current fails
+  ytmusic:
+    enabled: true # enables YouTube Music search via InnerTube
+    clients: ["WEB_REMIX", "ANDROID_MUSIC"] # preferred clients in order
+    allowFallback: true # automatically try next client if current fails

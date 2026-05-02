@@ -104,6 +104,13 @@ export interface AurisConfig {
     }
     youtube?: {
       enabled: boolean
+      clients?: string[]
+      allowFallback?: boolean
+    }
+    ytmusic?: {
+      enabled: boolean
+      clients?: string[]
+      allowFallback?: boolean
     }
   }
 }

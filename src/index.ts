@@ -63,10 +63,11 @@ const am = new AppleMusicSource(config)
 if (await am.setup()) sources.set('applemusic', am)
 
 if (config.sources.youtube?.enabled) {
-  const yt = new YoutubeSource()
+  const yt = new YoutubeSource(config)
   if (await yt.setup()) sources.set('youtube', yt)
-  
-  const ytm = new YoutubeMusicSource()
+}
+if (config.sources.ytmusic?.enabled) {
+  const ytm = new YoutubeMusicSource(config)
   if (await ytm.setup()) sources.set('ytmusic', ytm)
 }
 

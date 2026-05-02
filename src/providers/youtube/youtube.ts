@@ -1,20 +1,31 @@
-import { InnerTubeClient } from '../../clients/innertube.js'
+import { InnerTubeClient, type InnerTubeClientType } from '../../clients/innertube.js'
 import { encodeTrack } from '../../shared/media.js'
 import { log } from '../../shared/reporter.js'
-import type { LoadResult, Source, Track, TrackInfo } from '../../typings/index.js'
+import type { LoadResult, Source, Track, TrackInfo, AurisConfig } from '../../typings/index.js'
 
 export class YoutubeSource implements Source {
   public readonly name = 'youtube'
   public readonly searchPrefixes = ['ytsearch']
   
-  // Cliente principal Web e cliente TVHTML5 para bypass de restrições
-  private _webClient = new InnerTubeClient('WEB')
-  private _tvClient = new InnerTubeClient('TVHTML5')
+  private _clients: InnerTubeClient[] = []
+  private _allowFallback: boolean
+
+  constructor(config: AurisConfig) {
+    const yt = config.sources.youtube ?? { enabled: false }
+    const clientTypes = (yt.clients as InnerTubeClientType[]) || ['WEB', 'TVHTML5', 'ANDROID']
+    this._allowFallback = yt.allowFallback ?? true
+
+    for (const type of clientTypes) {
+      this._clients.push(new InnerTubeClient(type))
+    }
+  }
 
   async setup(): Promise<boolean> {
-    const webOk = !!(await this._webClient.getContext())
-    const tvOk = !!(await this._tvClient.getContext())
-    return webOk || tvOk
+    let anyOk = false
+    for (const client of this._clients) {
+      if (await client.getContext()) anyOk = true
+    }
+    return anyOk
   }
 
   accepts(url: string): boolean {
@@ -25,38 +36,42 @@ export class YoutubeSource implements Source {
     const videoId = this._extractVideoId(url)
     if (!videoId) return _empty()
 
-    // Tenta carregar via Web primeiro, se falhar (ex: restrição de idade), tenta via TV
-    let data = await this._webClient.request('player', { videoId })
-    if (!data || data.playabilityStatus?.status !== 'OK') {
-      log('warn', 'YouTube', `Web Player failed for ${videoId}, trying TVHTML5 bypass...`)
-      data = await this._tvClient.request('player', { videoId })
+    for (const client of this._clients) {
+      const data = await client.request('player', { videoId })
+      if (data && data.playabilityStatus?.status === 'OK') {
+        const v = data.videoDetails
+        const info: TrackInfo = {
+          identifier: v.videoId,
+          isSeekable: true,
+          author: v.author,
+          length: parseInt(v.lengthSeconds) * 1000,
+          isStream: v.isLiveContent || false,
+          position: 0,
+          title: v.title,
+          uri: `https://www.youtube.com/watch?v=${v.videoId}`,
+          artworkUrl: v.thumbnail?.thumbnails?.pop()?.url || null,
+          isrc: null,
+          sourceName: 'youtube'
+        }
+
+        return {
+          loadType: 'track',
+          data: { encoded: encodeTrack(info), info, pluginInfo: {} }
+        }
+      }
+
+      if (!this._allowFallback) break
+      log('warn', 'YouTube', `Client failed for ${videoId}, trying next...`)
     }
 
-    if (!data || data.playabilityStatus?.status !== 'OK') return _empty()
-
-    const v = data.videoDetails
-    const info: TrackInfo = {
-      identifier: v.videoId,
-      isSeekable: true,
-      author: v.author,
-      length: parseInt(v.lengthSeconds) * 1000,
-      isStream: v.isLiveContent || false,
-      position: 0,
-      title: v.title,
-      uri: `https://www.youtube.com/watch?v=${v.videoId}`,
-      artworkUrl: v.thumbnail?.thumbnails?.pop()?.url || null,
-      isrc: null,
-      sourceName: 'youtube'
-    }
-
-    return {
-      loadType: 'track',
-      data: { encoded: encodeTrack(info), info, pluginInfo: {} }
-    }
+    return _empty()
   }
 
   async search(query: string): Promise<LoadResult> {
-    const data = await this._webClient.request('search', { query })
+    const client = this._clients[0]
+    if (!client) return _empty()
+
+    const data = await client.request('search', { query })
     if (!data) return _empty()
 
     const tracks: Track[] = []

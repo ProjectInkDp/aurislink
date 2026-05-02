@@ -6,7 +6,7 @@
 //   3. Mobile Web Player with sp_dc cookie
 
 import crypto from 'node:crypto'
-import { httpGet, httpGetJson } from './http.js'
+import { httpGet, httpGetJson, httpPostJson } from './http.js'
 import { log } from './reporter.js'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ const SECRET_FETCH_INTERVAL = 60 * 60 * 1000
 const SECRETS_URL = 'https://raw.githubusercontent.com/xyloflake/spot-secrets-go/refs/heads/main/secrets/secretDict.json'
 
 // User-Agent sent to Spotify web endpoints.
-const AURIS_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36'
+export const AURIS_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36'
 
 // ─── Auth config (set via configureSpotifyAuth) ───────────────────────────────
 
@@ -100,6 +100,37 @@ export async function getMobileToken(): Promise<CachedToken | null> {
   if (!_spDc) return null
   await _ensureTier('mobile')
   return _cache.get('mobile') ?? null
+}
+
+export async function getClientToken(clientId: string): Promise<string | null> {
+  const url = 'https://clienttoken.spotify.com/v1/clienttoken'
+  const payload = {
+    client_data: {
+      client_id: clientId,
+      js_sdk_data: {
+        device_brand: 'unknown',
+        device_model: 'unknown',
+        os: 'linux',
+        os_version: 'unknown',
+      },
+    },
+  }
+  const headers = {
+    'Accept':       'application/json',
+    'Content-Type': 'application/json',
+    'Origin':       'https://open.spotify.com',
+    'Referer':      'https://open.spotify.com/',
+  }
+  try {
+    const res = await httpPostJson(url, payload, { headers })
+    if (res && res.status === 200) {
+      const data = JSON.parse(res.body)
+      return data.granted_token || null
+    }
+  } catch (err) {
+    log('error', 'SpotifyAuth', `Failed to generate client-token: ${err}`)
+  }
+  return null
 }
 
 async function _ensureTier(tier: SpotifyTokenTier): Promise<boolean> {

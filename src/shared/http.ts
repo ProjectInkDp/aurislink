@@ -108,6 +108,15 @@ export async function httpGetJson<T = unknown>(url: string, opts: HttpOptions = 
   catch { log('warn', 'HTTP', `JSON parse failed: ${url}`); return null }
 }
 
+export async function httpPostJson(url: string, body: unknown, opts: HttpOptions = {}): Promise<HttpResponse | null> {
+  return httpGet(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...opts.headers },
+    body: JSON.stringify(body),
+    ...opts
+  })
+}
+
 export function httpStream(url: string, opts: HttpOptions = {}): Promise<http.IncomingMessage | null> {
   return new Promise(resolve => {
     const { headers = {}, timeout = DEFAULT_TIMEOUT } = opts

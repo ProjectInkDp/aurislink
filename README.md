@@ -1,5 +1,7 @@
 # 🚀 AurisLink
 
+![Version](https://img.shields.io/github/package-json/v/ProjectInkDp/aurislink?filename=package.json&color=blue&label=version&style=flat-square)
+
 **AurisLink** is a high-performance, Lavalink-compatible audio server built for the **Auris Ecosystem**. It provides a robust and scalable solution for audio streaming, featuring a clean-room rewrite of core modules to ensure originality, performance, and technical superiority.
 
 > [!IMPORTANT]

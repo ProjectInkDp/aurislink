@@ -2,16 +2,24 @@
 import type { Source, LoadResult, Track, TrackInfo, AurisConfig } from '../typings/index.js'
 import { getSpotifyToken, configureSpotifyAuth } from '../shared/spotifyAuth.js'
 import { SpotifyTokenManager } from '../shared/spotify-auth.js'
-import { httpGet } from '../shared/http.js'
+import { httpGet, httpPostJson } from '../shared/http.js'
 import { log } from '../shared/reporter.js'
 import { encodeTrack } from '../shared/media.js'
 
-const AURIS_PATHFINDER = 'https://api-partner.spotify.com/pathfinder/v1/query'
+/**
+ * Spotify Partner API v2 endpoint (Pathfinder).
+ */
+const AURIS_PATHFINDER_V2 = 'https://api-partner.spotify.com/pathfinder/v2/query'
 
 interface GQLOp { name: string; hash: string }
+
+/**
+ * Persisted GraphQL queries for Spotify Pathfinder v2.
+ * Hashes updated for 2026 standards.
+ */
 const GQL = {
   track:    { name: 'getTrack',             hash: '612585ae06ba435ad26369870deaae23b5c8800a256cd8a57e08eddc25a37294' },
-  search:   { name: 'searchDesktop',         hash: 'fcad5a3e0d5af727fb76966f06971c19cfa2275e6ff7671196753e008611873c' },
+  search:   { name: 'searchTopResultsList', hash: '795a87647895afbb1e3f1aa923ced808ab960ae0e04b8f052f8fe182378d2cae' },
 } as const satisfies Record<string, GQLOp>
 
 export class AurisSpotifySource implements Source {
@@ -21,24 +29,29 @@ export class AurisSpotifySource implements Source {
     /https?:\/\/(?:open\.)?spotify\.com\/(?:intl-[a-zA-Z]{2}\/)?(track|album|playlist|artist|episode|show)\/([a-zA-Z0-9]+)/,
   ]
   
-  private _tokenManager = new SpotifyTokenManager()
+  private _tokenManager: SpotifyTokenManager
 
   constructor(config: AurisConfig) {
     const sp = config.sources.spotify ?? { enabled: false }
     configureSpotifyAuth(sp)
+    this._tokenManager = new SpotifyTokenManager(sp.sp_dc)
   }
 
   async setup(): Promise<boolean> {
-    // Apenas tenta obter o token, mas não bloqueia se falhar (o fallback cuidará disso)
-    await this._tokenManager.getAccessToken()
+    await this._tokenManager.getAuth()
     return true
   }
 
-  private async _getAccessToken(): Promise<string> {
-    const autoToken = await this._tokenManager.getAccessToken()
-    if (autoToken) return autoToken
-    const { accessToken } = await getSpotifyToken()
-    return accessToken
+  /**
+   * Internal helper to retrieve auth tokens with fallback to legacy system.
+   */
+  private async _getAuth() {
+    const auth = await this._tokenManager.getAuth()
+    if (auth) return auth
+    
+    // Fallback to legacy auth if modern flow fails
+    const oldAuth = await getSpotifyToken()
+    return { accessToken: oldAuth.accessToken, clientToken: null }
   }
 
   accepts(url: string): boolean {
@@ -53,29 +66,74 @@ export class AurisSpotifySource implements Source {
     return _empty()
   }
 
+  /**
+   * Performs a search using Spotify's Pathfinder v2 API.
+   */
   async search(query: string): Promise<LoadResult> {
-    log('info', 'Spotify', `Search: ${query}`)
+    log('info', 'Spotify', `Searching (Pathfinder v2): ${query}`)
     try {
-      const accessToken = await this._getAccessToken()
-      const url = `${AURIS_PATHFINDER}?operationName=${GQL.search.name}&variables=${encodeURIComponent(JSON.stringify({ searchTerm: query, offset: 0, limit: 10, numberOfTopResults: 5 }))}&extensions=${encodeURIComponent(JSON.stringify({ persistedQuery: { version: 1, sha256Hash: GQL.search.hash } }))}`
+      const auth = await this._getAuth()
+      const payload = {
+        variables: {
+          query: query,
+          limit: 20,
+          offset: 0,
+          numberOfTopResults: 20,
+          includeArtistHasConcertsField: false,
+          includeAudiobooks: true,
+          includeAuthors: false,
+          includePreReleases: true,
+          includeEpisodeContentRatingsV2: false,
+          isPrefix: null,
+          sectionFilters: ["GENERIC", "VIDEO_CONTENT"]
+        },
+        operationName: GQL.search.name,
+        extensions: {
+          persistedQuery: {
+            version: 1,
+            sha256Hash: GQL.search.hash
+          }
+        }
+      }
+
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${auth.accessToken}`,
+        'app-platform': 'WebPlayer',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
+      }
+
+      if (auth.clientToken) {
+        headers['client-token'] = auth.clientToken
+      }
       
-      const res = await httpGet(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+      const res = await httpPostJson(AURIS_PATHFINDER_V2, payload, { headers })
       if (res?.status === 200) {
         const data = JSON.parse(res.body)
-        const tracks = this._processGQLSearch(data)
+        const tracks = this._processGQLSearchV2(data)
         return { loadType: 'search', data: tracks }
       }
+      log('error', 'Spotify', `Search failed with status ${res?.status}`)
       return _empty()
     } catch (err) {
+      log('error', 'Spotify', `Search exception: ${err}`)
       return _error(String(err), 'fault')
     }
   }
 
+  /**
+   * Resolves a single Spotify track URI.
+   */
   private async _resolveTrack(id: string): Promise<LoadResult> {
-    const accessToken = await this._getAccessToken()
-    const url = `${AURIS_PATHFINDER}?operationName=${GQL.track.name}&variables=${encodeURIComponent(JSON.stringify({ uri: `spotify:track:${id}` }))}&extensions=${encodeURIComponent(JSON.stringify({ persistedQuery: { version: 1, sha256Hash: GQL.track.hash } }))}`
+    const auth = await this._getAuth()
+    const url = `https://api-partner.spotify.com/pathfinder/v1/query?operationName=${GQL.track.name}&variables=${encodeURIComponent(JSON.stringify({ uri: `spotify:track:${id}` }))}&extensions=${encodeURIComponent(JSON.stringify({ persistedQuery: { version: 1, sha256Hash: GQL.track.hash } }))}`
     
-    const res = await httpGet(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${auth.accessToken}`,
+      'app-platform': 'WebPlayer'
+    }
+    if (auth.clientToken) headers['client-token'] = auth.clientToken
+
+    const res = await httpGet(url, { headers })
     if (res?.status === 200) {
       const data = JSON.parse(res.body)
       const track = this._buildGQLTrack(data.data?.trackUnion)
@@ -84,6 +142,9 @@ export class AurisSpotifySource implements Source {
     return _empty()
   }
 
+  /**
+   * Maps Spotify GQL track data to Auris internal Track format.
+   */
   private _buildGQLTrack(item: any): Track | null {
     if (!item?.uri) return null
     const id = item.uri.split(':').pop() ?? ''
@@ -103,11 +164,20 @@ export class AurisSpotifySource implements Source {
     return { encoded: encodeTrack(info), info, pluginInfo: {} }
   }
 
-  private _processGQLSearch(data: any): Track[] {
+  /**
+   * Processes the complex nested response from Pathfinder v2 search.
+   */
+  private _processGQLSearchV2(data: any): Track[] {
     const tracks: Track[] = []
-    for (const it of data.data?.searchV2?.tracksV2?.items ?? []) {
-      const t = this._buildGQLTrack(it.item.data)
-      if (t) tracks.push(t)
+    const items = data.data?.searchV2?.topResultsV2?.itemsV2 ?? []
+    
+    for (const it of items) {
+      const itemData = it.item?.data
+      // Ensure we only process Track entities from the mixed result list
+      if (itemData?.__typename === 'Track' || itemData?.uri?.includes(':track:')) {
+        const t = this._buildGQLTrack(itemData)
+        if (t) tracks.push(t)
+      }
     }
     return tracks
   }

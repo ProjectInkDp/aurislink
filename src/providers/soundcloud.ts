@@ -19,7 +19,7 @@ import { log } from '../shared/reporter.js'
 const SC_URL = 'https://soundcloud.com'
 const API_URL = 'https://api-v2.soundcloud.com'
 const ASSET_RE = /https:\/\/a-v2\.sndcdn\.com\/assets\/[a-zA-Z0-9-]+\.js/g
-const CLIENT_ID_RE = /(?:[?&\/]?(?:client_id)[\s:=&]*"?|"data":{"id":")([A-Za-z0-9]{32})"?/
+const CLIENT_ID_RE = /(?:[?&\/]?(?:client_id)[\s:=&]*"?|"data":{"id":")([A-Za-z0-9]{32})"?|client_id:["']([a-zA-Z0-9]{32})["']/
 
 // Patterns for URL matching
 const TRACK_URL_RE = /^https?:\/\/(?:www\.|m\.)?soundcloud\.com\/[^/\s]+\/(?!sets\/)[^/\s]+(?:\?.*)?$/

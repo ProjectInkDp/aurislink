@@ -83,9 +83,14 @@ export class DeezerSource implements Source {
     const arl = this.config.sources.deezer.arl
     const initialCookie = typeof arl === 'string' && arl.length > 0 ? `arl=${arl}` : ''
 
+    // AurisLink Auto-Token Strategy:
+    // If no ARL is provided, we fetch an anonymous session token from the gateway.
     const url = 'https://www.deezer.com/ajax/gw-light.php?method=deezer.getUserData&input=3&api_version=1.0&api_token='
     const res = await httpGet(url, {
-      headers: initialCookie ? { Cookie: initialCookie } : {},
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
+        ...(initialCookie ? { Cookie: initialCookie } : {})
+      },
     })
 
     if (!res || res.status >= 400) {

@@ -56,6 +56,8 @@ export interface AurisConfig {
   plugins?: PluginDefinition[]
 
   lyrics?: {
+    enabled: boolean
+    providers: ('deezer' | 'lrclib' | 'yandexmusic')[]
     yandexmusic?: {
       accessToken?: string
     }

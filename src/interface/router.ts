@@ -102,7 +102,7 @@ export function createRouter(
     if ((match = path.match(PLAYER_RE))) {
       const sessionId = match[1]!
       const guildId = match[2]!
-      if (method === 'GET') return handleGetPlayer(req, res, sessionId, guildId, sm)
+         if (method === 'GET') return handleLyrics(req, res, sessionId, guildId, sm, config)
       if (method === 'PATCH') return handleUpdatePlayer(req, res, sessionId, guildId, sm, wsm, sources, url)
       if (method === 'DELETE') return handleDeletePlayer(req, res, sessionId, guildId, sm, wsm)
     }

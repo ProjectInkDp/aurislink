@@ -13,12 +13,15 @@ export class SpotifyTokenManager {
   private _clientToken: string | null = null
   private _expiresAt = 0
   private _spDc: string | null = null
+  private _vault: any | null = null
 
-  constructor(spDc?: string) {
+  constructor(spDc?: string, vault?: any) {
     this._spDc = spDc || null
+    this._vault = vault || null
   }
 
   async getAuth(): Promise<SpotifyAuthTokens | null> {
+    // 1. Check memory cache
     if (this._accessToken && Date.now() < this._expiresAt) {
       return {
         accessToken: this._accessToken,
@@ -27,13 +30,32 @@ export class SpotifyTokenManager {
       }
     }
 
+    // 2. Check Vault (Secure Persistence)
+    if (this._vault) {
+      const cached = this._vault.get<SpotifyAuthTokens>(`spotify_auth_${this._spDc || 'anon'}`)
+      if (cached && Date.now() < cached.expiresAt) {
+        this._accessToken = cached.accessToken
+        this._expiresAt = cached.expiresAt
+        this._clientToken = cached.clientToken || null
+        return cached
+      }
+    }
+
+    // 3. Refresh if nothing valid found
     const success = await this._refreshTokens()
     if (success && this._accessToken) {
-      return {
+      const auth = {
         accessToken: this._accessToken,
         expiresAt: this._expiresAt,
         clientToken: this._clientToken || undefined
       }
+      
+      // Persist to Vault
+      if (this._vault) {
+        void this._vault.set(`spotify_auth_${this._spDc || 'anon'}`, auth, this._expiresAt - Date.now())
+      }
+
+      return auth
     }
     return null
   }

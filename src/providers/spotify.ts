@@ -31,10 +31,10 @@ export class AurisSpotifySource implements Source {
   
   private _tokenManager: SpotifyTokenManager
 
-  constructor(config: AurisConfig) {
+  constructor(config: AurisConfig, vault?: any) {
     const sp = config.sources.spotify ?? { enabled: false }
     configureSpotifyAuth(sp)
-    this._tokenManager = new SpotifyTokenManager(sp.sp_dc)
+    this._tokenManager = new SpotifyTokenManager(sp.sp_dc, vault)
   }
 
   async setup(): Promise<boolean> {

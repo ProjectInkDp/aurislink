@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🧪 [AurisLink] Running Git Hygiene & Safety Checks..."
+
+# 1. Check for 'git add .' pattern (untracked files that should be handled individually)
+UNTRACKED=$(git ls-files --others --exclude-standard)
+if [ ! -z "$UNTRACKED" ]; then
+  echo "❌ [Git Hygiene] Untracked files detected. Please add files individually. Do not use 'git add .'"
+  echo "Files:\n$UNTRACKED"
+  exit 1
+fi
+
+# 2. Run Type Check
+echo "🔍 Checking types..."
+npm run type-check || exit 1
+
+echo "✅ [AurisLink] Hygiene check passed. Proceeding with push."

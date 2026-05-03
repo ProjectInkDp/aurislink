@@ -60,7 +60,7 @@ export function createRouter(
     if (method === 'GET' && path === '/v4/health') return handleHealth(req, res)
     if (method === 'GET' && path === '/v4/metrics') return handleMetrics(req, res, sm)
     if (method === 'GET' && path === '/v4/version') return handleVersion(req, res)
-    if (method === 'GET' && path === '/v4/dashboard') return handleDashboard(req, res, sm)
+    if (method === 'GET' && path === '/v4/dashboard') return handleDashboard(req, res, sm, trackCache)
 
     if (rateLimiter) {
       const rl = rateLimiter.check(req)

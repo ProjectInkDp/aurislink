@@ -8,6 +8,7 @@ import { DeezerSource } from './providers/deezer.js'
 import { JioSaavnSource } from './providers/jiosaavn.js'
 import { AurisSpotifySource } from './providers/spotify.js'
 import { AppleMusicSource } from './providers/applemusic.js'
+import { getVersionStatus } from './shared/versionCheck.js'
 import { YoutubeSource } from './providers/youtube/youtube.js'
 import { YoutubeMusicSource } from './providers/youtube/music.js'
 import { createServer } from './server.js'
@@ -39,6 +40,9 @@ log('info', 'AurisLink', '──────────────────
 log('info', 'AurisLink', '  AurisLink v1.7.0 — starting up…')
 log('info', 'AurisLink', '─────────────────────────────────────')
 
+// Async version check
+void getVersionStatus()
+
 const ctx = { options: config as unknown as Record<string, unknown> }
 const trackCache = new TrackCache(ctx)
 await trackCache.load()
@@ -56,7 +60,7 @@ if (await dz.setup()) sources.set('deezer', dz)
 const js = new JioSaavnSource(config)
 if (await js.setup()) sources.set('jiosaavn', js)
 
-const sp = new AurisSpotifySource(config)
+const sp = new AurisSpotifySource(config, tokenStore)
 if (await sp.setup()) sources.set('spotify', sp)
 
 const am = new AppleMusicSource(config)

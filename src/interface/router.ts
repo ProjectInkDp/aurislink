@@ -86,8 +86,29 @@ export function createRouter(
     if (method === 'POST' && path === '/v4/encodetrack') return handleEncodeTrack(req, res)
     if (method === 'POST' && path === '/v4/encodetracks') return handleEncodeTracks(req, res)
 
-    // ... rest of the router logic (simplified for brevity in this step)
-    // In a real scenario, I would ensure all routes are correctly mapped.
+    // Session & Player routes
+    let match: RegExpMatchArray | null
+
+    if ((match = path.match(SESSION_RE))) {
+      if (method === 'PATCH') return handleUpdateSession(req, res, match[1]!, sm)
+    }
+
+    if ((match = path.match(PLAYERS_RE))) {
+      if (method === 'GET') return handleGetPlayers(req, res, match[1]!, sm)
+    }
+
+    if ((match = path.match(PLAYER_RE))) {
+      const sessionId = match[1]!
+      const guildId = match[2]!
+      if (method === 'GET') return handleGetPlayer(req, res, sessionId, guildId, sm)
+      if (method === 'PATCH') return handleUpdatePlayer(req, res, sessionId, guildId, sm, wsm, sources, url)
+      if (method === 'DELETE') return handleDeletePlayer(req, res, sessionId, guildId, sm, wsm)
+    }
+
+    if ((match = path.match(FILTERS_RE))) {
+      if (method === 'GET') return handleGetFilters(req, res, match[1]!, match[2]!, sm)
+    }
+
     sendError(res, 404, 'Not Found', `No route for ${method} ${path}`)
   }
 }

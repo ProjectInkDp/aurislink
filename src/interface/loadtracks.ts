@@ -5,8 +5,8 @@ import type { AurisConfig, Source } from '../typings/index.js'
 import { log } from '../shared/reporter.js'
 import { sendJson, sendError } from './helpers.js'
 
-// Matches "scsearch:query", "ytsearch:query", etc.
-const PREFIX_RE = /^([a-z]+)search:(.+)$/i
+// Matches "scsearch:query", "ytsearch:query", "search:query", etc.
+const PREFIX_RE = /^([a-z]+)(?:search)?:(.+)$/i
 
 export async function handleLoadTracks(
   _req: http.IncomingMessage,
@@ -24,14 +24,28 @@ export async function handleLoadTracks(
   log('info', 'LoadTracks', `identifier: ${identifier}`)
 
   try {
-    // Search prefix (e.g. scsearch:lofi)
+    // Search prefix (e.g. scsearch:lofi or search:lofi)
     const prefixMatch = identifier.match(PREFIX_RE)
     if (prefixMatch) {
-      const prefix = prefixMatch[1]!.toLowerCase() + 'search'
+      let prefix = prefixMatch[1]!.toLowerCase()
+      if (prefix !== 'search') prefix += 'search'
       const query = prefixMatch[2]!.trim()
 
       if (!query) {
         return sendError(res, 400, 'Bad Request', 'Search query cannot be empty')
+      }
+
+      // Global search across all sources
+      if (prefix === 'search') {
+        log('info', 'LoadTracks', `Performing global search for: ${query}`)
+        const allResults = await Promise.all(
+          Array.from(sources.values()).map(s => s.search(query).catch(() => ({ loadType: 'empty', data: {} })))
+        )
+        const tracks = allResults
+          .filter(r => r.loadType === 'search')
+          .flatMap(r => r.data as any[])
+        
+        return sendJson(res, 200, tracks.length > 0 ? { loadType: 'search', data: tracks } : { loadType: 'empty', data: {} })
       }
 
       for (const source of sources.values()) {

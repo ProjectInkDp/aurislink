@@ -114,6 +114,8 @@ rateLimit:
 
 # --- Lyrics providers ---
 lyrics:
+  enabled: true # master toggle for the lyrics system
+  providers: ["deezer", "lrclib"] # preferred providers in order: "deezer" | "lrclib" | "yandexmusic"
   yandexmusic:
     accessToken: "" # Yandex Music OAuth2 token (optional)
 
@@ -136,7 +138,7 @@ sources:
       username: "" # optional proxy username
       password: "" # optional proxy password
   lastfm:
-    apiKey: "" # Last.fm API key — enables listeners/playcount in /v4/meaning
+    apiKey: "" # Last.fm API key — enables listeners/playcount in /v4/meaning (Smart Meaning)
   spotify:
     enabled: false
     market: "US" # ISO 3166-1 alpha-2 country code

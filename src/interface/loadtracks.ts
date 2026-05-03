@@ -28,7 +28,7 @@ export async function handleLoadTracks(
     const prefixMatch = identifier.match(PREFIX_RE)
     if (prefixMatch) {
       let prefix = prefixMatch[1]!.toLowerCase()
-      if (prefix !== 'search') prefix += 'search'
+      if (prefix !== 'search' && !prefix.endsWith('search')) prefix += 'search'
       const query = prefixMatch[2]!.trim()
 
       if (!query) {

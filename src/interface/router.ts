@@ -86,6 +86,8 @@ export function createRouter(
     if (method === 'POST' && path === '/v4/encodetrack') return handleEncodeTrack(req, res)
     if (method === 'POST' && path === '/v4/encodetracks') return handleEncodeTracks(req, res)
 
+    if (method === 'GET' && path === '/v4/meaning') return handleMeaning(req, res, url, config.sources.lastfm?.apiKey)
+
     // Session & Player routes
     let match: RegExpMatchArray | null
 

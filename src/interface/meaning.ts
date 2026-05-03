@@ -1,68 +1,16 @@
 // src/api/meaning.ts
-// GET /v4/meaning?encodedTrack=<encoded>&language=<lang>
+// GET /v4/meaning?encodedTrack=...&language=...
 //
-// Returns rich artist/track info from 3 public APIs in parallel:
-//   - Wikipedia  → bio / description (no key needed)
-//   - MusicBrainz → genre, year, label, country (no key needed)
-//   - Last.fm     → tags, listeners, playcount (key optional)
-//
-// Results are cached for 24h per track identifier.
+// Provides a deep dive into the meaning, history, and context of a track.
+// Combines Wikipedia, MusicBrainz, Last.fm, and AI-powered analysis.
 
 import type http from 'node:http'
 import { sendJson, sendError } from './helpers.js'
 import { httpGetJson } from '../shared/http.js'
 import { decodeTrack } from '../shared/media.js'
-
-const CACHE_TTL = 24 * 60 * 60 * 1000
-const cache = new Map<string, { data: MeaningResponse; expiresAt: number }>()
+import OpenAI from 'openai'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface WikipediaResult {
-  query?: {
-    search?: Array<{ title?: string }>
-    pages?: Record<string, { extract?: string; missing?: boolean }>
-  }
-}
-
-interface MusicBrainzRecording {
-  recordings?: Array<{
-    id?: string
-    title?: string
-    'first-release-date'?: string
-    releases?: Array<{
-      title?: string
-      date?: string
-      country?: string
-      'label-info'?: Array<{ label?: { name?: string } }>
-      'release-group'?: { 'primary-type'?: string }
-    }>
-    tags?: Array<{ name?: string; count?: number }>
-    isrcs?: string[]
-  }>
-}
-
-interface MusicBrainzArtist {
-  artists?: Array<{
-    id?: string
-    name?: string
-    country?: string
-    'begin-area'?: { name?: string }
-    'life-span'?: { begin?: string; end?: string; ended?: boolean }
-    tags?: Array<{ name?: string; count?: number }>
-  }>
-}
-
-interface LastFmTrack {
-  track?: {
-    listeners?: string
-    playcount?: string
-    toptags?: { tag?: Array<{ name?: string }> }
-    wiki?: { summary?: string }
-    url?: string
-  }
-  error?: number
-}
 
 interface MeaningResponse {
   track: {
@@ -88,6 +36,11 @@ interface MeaningResponse {
     listeners: number | null
     playcount: number | null
   }
+  aiAnalysis: {
+    meaning: string | null
+    context: string | null
+    funFact: string | null
+  }
   wikipedia: {
     language: string
     extract: string | null
@@ -100,7 +53,52 @@ interface MeaningResponse {
   cachedAt: number
 }
 
-// ─── Providers ────────────────────────────────────────────────────────────────
+interface WikipediaResult {
+  query?: {
+    search?: Array<{ title?: string }>
+    pages?: Record<string, { extract?: string; missing?: boolean }>
+  }
+}
+
+interface MusicBrainzRecording {
+  recordings?: Array<{
+    'first-release-date'?: string
+    isrcs?: string[]
+    tags?: Array<{ count?: number; name?: string }>
+    releases?: Array<{
+      date?: string
+      country?: string
+      'label-info'?: Array<{ label?: { name?: string } }>
+      'release-group'?: { 'primary-type'?: string }
+    }>
+  }>
+}
+
+interface MusicBrainzArtist {
+  artists?: Array<{
+    country?: string
+    'begin-area'?: { name?: string }
+    'life-span'?: { begin?: string; end?: string; ended?: boolean }
+    tags?: Array<{ count?: number; name?: string }>
+  }>
+}
+
+interface LastFmTrack {
+  error?: number
+  track?: {
+    listeners?: string
+    playcount?: string
+    url?: string
+    wiki?: { summary?: string }
+  }
+}
+
+// ─── Cache ────────────────────────────────────────────────────────────────────
+
+const cache = new Map<string, { data: MeaningResponse; expiresAt: number }>()
+const CACHE_TTL = 1000 * 60 * 60 * 24 // 24 hours
+
+// ─── External APIs ────────────────────────────────────────────────────────────
 
 async function fetchWikipedia(query: string, language: string): Promise<{ extract: string | null; url: string | null }> {
   const searchUrl = `https://${language}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&srlimit=1`
@@ -157,9 +155,8 @@ async function fetchMusicBrainzArtist(artist: string) {
   }
 }
 
-async function fetchLastFm(title: string, artist: string, apiKey?: string): Promise<{ listeners: number | null; playcount: number | null; summary: string | null; url: string | null }> {
+async function fetchLastFm(title: string, artist: string, apiKey?: string) {
   if (!apiKey) return { listeners: null, playcount: null, summary: null, url: null }
-
   const url = `https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${apiKey}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(title)}&format=json`
   const res = await httpGetJson<LastFmTrack>(url)
   if (!res || res.error) return { listeners: null, playcount: null, summary: null, url: null }
@@ -173,6 +170,29 @@ async function fetchLastFm(title: string, artist: string, apiKey?: string): Prom
     playcount: t?.playcount ? parseInt(t.playcount, 10) : null,
     summary,
     url: t?.url ?? null,
+  }
+}
+
+async function generateAiAnalysis(title: string, artist: string, language: string) {
+  const openai = new OpenAI()
+  const prompt = `Explain the meaning, historical context, and a fun fact about the song "${title}" by "${artist}". 
+  Respond in ${language} language. 
+  Format the response as a JSON object with keys: "meaning", "context", "funFact". 
+  Keep each section concise (max 3 sentences).`
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" }
+    })
+
+    const content = completion.choices[0]?.message?.content
+    if (!content) return { meaning: null, context: null, funFact: null }
+    return JSON.parse(content) as { meaning: string; context: string; funFact: string }
+  } catch (err) {
+    console.error('AI Analysis Error:', err)
+    return { meaning: null, context: null, funFact: null }
   }
 }
 
@@ -190,18 +210,25 @@ export async function handleMeaning(
   const language = url.searchParams.get('language')?.trim() || 'en'
 
   let info: ReturnType<typeof decodeTrack>
-  try { info = decodeTrack(encodedTrack) } catch { return sendError(res, 400, 'Bad Request', 'Could not decode track') }
+  try {
+    info = decodeTrack(encodedTrack)
+  } catch {
+    return sendError(res, 400, 'Bad Request', 'Could not decode track')
+  }
 
   const cacheKey = `${info.identifier}:${language}`
   const cached = cache.get(cacheKey)
-  if (cached && cached.expiresAt > Date.now()) return sendJson(res, 200, cached.data)
+  if (cached && cached.expiresAt > Date.now()) {
+    return sendJson(res, 200, cached.data)
+  }
 
   // Fetch all sources in parallel
-  const [wiki, mbTrack, mbArtist, lastfm] = await Promise.all([
+  const [wiki, mbTrack, mbArtist, lastfm, ai] = await Promise.all([
     fetchWikipedia(`${info.author} ${info.title}`, language).catch(() => ({ extract: null, url: null })),
     fetchMusicBrainzTrack(info.title, info.author).catch(() => null),
     fetchMusicBrainzArtist(info.author).catch(() => null),
     fetchLastFm(info.title, info.author, lastFmKey).catch(() => ({ listeners: null, playcount: null, summary: null, url: null })),
+    generateAiAnalysis(info.title, info.author, language).catch(() => ({ meaning: null, context: null, funFact: null }))
   ])
 
   const data: MeaningResponse = {
@@ -227,6 +254,11 @@ export async function handleMeaning(
     stats: {
       listeners: lastfm.listeners,
       playcount: lastfm.playcount,
+    },
+    aiAnalysis: {
+      meaning: ai.meaning,
+      context: ai.context,
+      funFact: ai.funFact,
     },
     wikipedia: {
       language,

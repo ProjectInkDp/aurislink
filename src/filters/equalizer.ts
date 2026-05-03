@@ -93,7 +93,7 @@ export class Equalizer {
     if (this.activeBands.every(g => g === 0)) return buffer
 
     for (let i = 0; i < buffer.length; i += 4) {
-      let left  = buffer.readInt16LE(i)
+      let left = buffer.readInt16LE(i)
       let right = buffer.readInt16LE(i + 2)
 
       for (const node of this.nodes) {
@@ -126,4 +126,16 @@ export class Equalizer {
       node.z1L = node.z2L = node.z1R = node.z2R = 0
     }
   }
+}
+
+const eqInstanceMap = new WeakMap<AudioFilters, Equalizer>()
+
+export function applyEqualizer(chunk: Buffer, filters: AudioFilters): Buffer {
+  let eq = eqInstanceMap.get(filters)
+  if (!eq) {
+    eq = new Equalizer()
+    eq.update(filters)
+    eqInstanceMap.set(filters, eq)
+  }
+  return eq.process(chunk)
 }

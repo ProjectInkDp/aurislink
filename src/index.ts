@@ -7,6 +7,10 @@ import { SoundCloudSource } from './providers/soundcloud.js'
 import { DeezerSource } from './providers/deezer.js'
 import { JioSaavnSource } from './providers/jiosaavn.js'
 import { AurisSpotifySource } from './providers/spotify.js'
+import { AppleMusicSource } from './providers/applemusic.js'
+import { getVersionStatus } from './shared/versionCheck.js'
+import { YoutubeSource } from './providers/youtube/youtube.js'
+import { YoutubeMusicSource } from './providers/youtube/music.js'
 import { createServer } from './server.js'
 import ContentManager from './engine/ContentManager.js'
 import { PluginManager } from './engine/PluginManager.js'
@@ -33,8 +37,11 @@ const pluginManager = new PluginManager(config)
 await pluginManager.setup()
 
 log('info', 'AurisLink', '─────────────────────────────────────')
-log('info', 'AurisLink', '  AurisLink v1.7.0 — starting up…')
+log('info', 'AurisLink', '  AurisLink v1.9.1-dev — starting up…')
 log('info', 'AurisLink', '─────────────────────────────────────')
+
+// Async version check
+void getVersionStatus()
 
 const ctx = { options: config as unknown as Record<string, unknown> }
 const trackCache = new TrackCache(ctx)
@@ -43,7 +50,30 @@ await trackCache.load()
 const tokenStore = new Vault(config.server.password)
 
 const sources = new Map<string, Source>()
-// ... source initialization ...
+
+const sc = new SoundCloudSource()
+if (await sc.setup()) sources.set('soundcloud', sc)
+
+const dz = new DeezerSource(config)
+if (await dz.setup()) sources.set('deezer', dz)
+
+const js = new JioSaavnSource(config)
+if (await js.setup()) sources.set('jiosaavn', js)
+
+const sp = new AurisSpotifySource(config, tokenStore)
+if (await sp.setup()) sources.set('spotify', sp)
+
+const am = new AppleMusicSource(config)
+if (await am.setup()) sources.set('applemusic', am)
+
+if (config.sources.youtube?.enabled) {
+  const yt = new YoutubeSource(config)
+  if (await yt.setup()) sources.set('youtube', yt)
+}
+if (config.sources.ytmusic?.enabled) {
+  const ytm = new YoutubeMusicSource(config)
+  if (await ytm.setup()) sources.set('ytmusic', ytm)
+}
 
 const lyricsManager = ContentManager.getInstance()
 

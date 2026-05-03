@@ -2,7 +2,7 @@
 // Low-pass filter — single-pole IIR smoothing.
 // smoothing: 1–100, higher = more bass (default 20)
 
-import type { Filters } from '../engine/SessionManager.js'
+import type { AudioFilters as Filters } from '../engine/SessionManager.js'
 
 function clamp16(v: number): number {
   return v > 32767 ? 32767 : v < -32768 ? -32768 : v | 0

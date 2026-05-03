@@ -33,8 +33,8 @@ import type GuardManager from '../engine/Guard.js'
 
 const SESSION_RE = /^\/v4\/sessions\/([^/]+)$/
 const PLAYERS_RE = /^\/v4\/sessions\/([^/]+)\/players$/
-const PLAYER_RE  = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)$/
-const LYRICS_RE  = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/track\/lyrics$/
+const PLAYER_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)$/
+const LYRICS_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/track\/lyrics$/
 const LYRICS_SUB_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/lyrics\/subscribe$/
 const FILTERS_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/filters$/
 
@@ -60,7 +60,7 @@ export function createRouter(
     if (method === 'GET' && path === '/v4/health') return handleHealth(req, res)
     if (method === 'GET' && path === '/v4/metrics') return handleMetrics(req, res, sm)
     if (method === 'GET' && path === '/v4/version') return handleVersion(req, res)
-    if (method === 'GET' && path === '/v4/dashboard') return handleDashboard(req, res)
+    if (method === 'GET' && path === '/v4/dashboard') return handleDashboard(req, res, sm, trackCache)
 
     if (rateLimiter) {
       const rl = rateLimiter.check(req)
@@ -86,8 +86,31 @@ export function createRouter(
     if (method === 'POST' && path === '/v4/encodetrack') return handleEncodeTrack(req, res)
     if (method === 'POST' && path === '/v4/encodetracks') return handleEncodeTracks(req, res)
 
-    // ... rest of the router logic (simplified for brevity in this step)
-    // In a real scenario, I would ensure all routes are correctly mapped.
+    if (method === 'GET' && path === '/v4/meaning') return handleMeaning(req, res, url, config.sources.lastfm?.apiKey)
+
+    // Session & Player routes
+    let match: RegExpMatchArray | null
+
+    if ((match = path.match(SESSION_RE))) {
+      if (method === 'PATCH') return handleUpdateSession(req, res, match[1]!, sm)
+    }
+
+    if ((match = path.match(PLAYERS_RE))) {
+      if (method === 'GET') return handleGetPlayers(req, res, match[1]!, sm)
+    }
+
+    if ((match = path.match(PLAYER_RE))) {
+      const sessionId = match[1]!
+      const guildId = match[2]!
+         if (method === 'GET') return handleLyrics(req, res, sessionId, guildId, sm, config)
+      if (method === 'PATCH') return handleUpdatePlayer(req, res, sessionId, guildId, sm, wsm, sources, url)
+      if (method === 'DELETE') return handleDeletePlayer(req, res, sessionId, guildId, sm, wsm)
+    }
+
+    if ((match = path.match(FILTERS_RE))) {
+      if (method === 'GET') return handleGetFilters(req, res, match[1]!, match[2]!, sm)
+    }
+
     sendError(res, 404, 'Not Found', `No route for ${method} ${path}`)
   }
 }

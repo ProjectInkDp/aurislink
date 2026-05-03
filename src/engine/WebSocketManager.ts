@@ -57,8 +57,8 @@ export class WebSocketManager {
         return
       }
 
-      const userId   = req.headers['user-id']     as string | undefined
-      const agent    = req.headers['client-name'] as string | undefined
+      const userId = req.headers['user-id']     as string | undefined
+      const agent = req.headers['client-name'] as string | undefined
       const resumeId = req.headers['session-id']  as string | undefined
 
       if (!userId) {
@@ -244,7 +244,7 @@ export class WebSocketManager {
             this.stallTracker.delete(player.guildId)
             continue
           }
-          const pos  = this.orchestrator.computePosition(player)
+          const pos = this.orchestrator.computePosition(player)
           const last = this.stallTracker.get(player.guildId)
 
           if (last === undefined) {

@@ -33,11 +33,11 @@ export function handleMetrics(
   let playingPlayers = 0
   let totalSessions = 0
 
-  const sessions = sm.getAllSessions()
+  const sessions = sm.listActive()
   totalSessions = sessions.length
 
   for (const session of sessions) {
-    for (const player of session.players.values()) {
+    for (const player of session.registry.values()) {
       totalPlayers++
       if (player.track && !player.paused) playingPlayers++
     }

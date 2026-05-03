@@ -8,11 +8,11 @@ import https from 'node:https'
 import type { ConnectionConfig } from '../typings/index.js'
 import { log } from '../shared/reporter.js'
 
-const DEFAULT_PROBE_URL     = 'https://speed.cloudflare.com/__down?bytes=1000000'
-const DEFAULT_INTERVAL_MS   = 300_000   // 5 min
-const DEFAULT_TIMEOUT_MS    = 10_000    // 10 s
-const DEFAULT_BAD_MBPS      = 1
-const DEFAULT_AVERAGE_MBPS  = 5
+const DEFAULT_PROBE_URL = 'https://speed.cloudflare.com/__down?bytes=1000000'
+const DEFAULT_INTERVAL_MS = 300_000   // 5 min
+const DEFAULT_TIMEOUT_MS = 10_000    // 10 s
+const DEFAULT_BAD_MBPS = 1
+const DEFAULT_AVERAGE_MBPS = 5
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -23,9 +23,9 @@ function bytesToMbps(bytes: number, elapsedMs: number): number {
 
 function resolveRequest(url: string, timeoutMs: number): Promise<{ bytes: number; elapsedMs: number }> {
   return new Promise((resolve, reject) => {
-    const parsed   = new URL(url)
-    const driver   = parsed.protocol === 'https:' ? https : http
-    const start    = Date.now()
+    const parsed = new URL(url)
+    const driver = parsed.protocol === 'https:' ? https : http
+    const start = Date.now()
     let   received = 0
 
     const req = driver.get(url, { timeout: timeoutMs }, (res) => {

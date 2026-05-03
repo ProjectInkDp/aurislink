@@ -15,7 +15,7 @@ server:
 
 # --- Logging ---
 logging:
-  level: "info" # "debug" | "info" | "warn" | "error"
+  level: "info" # "debug" | "info" # "debug" | "info" | "warn" | "error"
   timestamps: true
   colors: true
   file:
@@ -114,6 +114,8 @@ rateLimit:
 
 # --- Lyrics providers ---
 lyrics:
+  enabled: true # master toggle for the lyrics system
+  providers: ["deezer", "lrclib"] # preferred providers in order: "deezer" | "lrclib" | "yandexmusic"
   yandexmusic:
     accessToken: "" # Yandex Music OAuth2 token (optional)
 
@@ -136,7 +138,7 @@ sources:
       username: "" # optional proxy username
       password: "" # optional proxy password
   lastfm:
-    apiKey: "" # Last.fm API key — enables listeners/playcount in /v4/meaning
+    apiKey: "" # Last.fm API key — enables listeners/playcount in /v4/meaning (Smart Meaning)
   spotify:
     enabled: false
     market: "US" # ISO 3166-1 alpha-2 country code
@@ -147,3 +149,16 @@ sources:
     clientSecret: ""
     customTokenEndpoint: ""
     sp_dc: ""
+  applemusic:
+    enabled: false
+    market: "US" # ISO 3166-1 alpha-2 country code
+    playlistLoadLimit: 100
+    albumLoadLimit: 50
+  youtube:
+    enabled: true # enables YouTube search via InnerTube
+    clients: ["WEB", "TVHTML5", "ANDROID"] # preferred clients in order
+    allowFallback: true # automatically try next client if current fails
+  ytmusic:
+    enabled: true # enables YouTube Music search via InnerTube
+    clients: ["WEB_REMIX", "ANDROID_MUSIC"] # preferred clients in order
+    allowFallback: true # automatically try next client if current fails

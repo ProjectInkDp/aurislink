@@ -56,6 +56,8 @@ export interface AurisConfig {
   plugins?: PluginDefinition[]
 
   lyrics?: {
+    enabled: boolean
+    providers: ('deezer' | 'lrclib' | 'yandexmusic')[]
     yandexmusic?: {
       accessToken?: string
     }
@@ -95,6 +97,22 @@ export interface AurisConfig {
       customTokenEndpoint?:  string
       preferAnonymousToken?: boolean
       sp_dc?:                string
+    }
+    applemusic?: {
+      enabled: boolean
+      market?: string
+      playlistLoadLimit?: number
+      albumLoadLimit?: number
+    }
+    youtube?: {
+      enabled: boolean
+      clients?: string[]
+      allowFallback?: boolean
+    }
+    ytmusic?: {
+      enabled: boolean
+      clients?: string[]
+      allowFallback?: boolean
     }
   }
 }

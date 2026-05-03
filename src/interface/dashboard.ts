@@ -4,9 +4,14 @@
 
 import type http from 'node:http'
 import type { SessionManager } from '../engine/SessionManager.js'
+import type TrackCache from '../engine/TrackCacheSQL.js'
+import { getVersionStatus } from '../shared/versionCheck.js'
 
-export function handleDashboard(req: http.IncomingMessage, res: http.ServerResponse, sm: SessionManager) {
+export async function handleDashboard(req: http.IncomingMessage, res: http.ServerResponse, sm: SessionManager, cache?: TrackCache) {
   const sessions = sm.listActive()
+  const vStatus = await getVersionStatus()
+  const cacheStats = cache?.getStats() || { hits: 0, misses: 0, size: 0 }
+  
   let totalPlayers = 0
   let activePlayers = 0
 
@@ -39,14 +44,24 @@ export function handleDashboard(req: http.IncomingMessage, res: http.ServerRespo
         .status-active { color: #00cfc1; }
         .status-idle { color: #ff4d4d; }
         .badge { background: #333; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; color: #aaa; }
+        .alert { padding: 15px; border-radius: 8px; margin-top: 20px; text-align: center; font-weight: bold; }
+        .alert-warn { background: #ff980033; border: 1px solid #ff9800; color: #ff9800; }
+        .alert-critical { background: #f4433633; border: 1px solid #f44336; color: #f44336; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>AurisLink <small style="font-size: 0.5em; color: #555;">v1.8.0</small></h1>
+            <h1>AurisLink <small style="font-size: 0.5em; color: #555;">${vStatus.current}</small></h1>
             <div id="uptime">Uptime: ${Math.floor(process.uptime() / 60)}m</div>
         </div>
+
+        ${vStatus.isOutdated ? `
+            <div class="alert ${vStatus.isCritical ? 'alert-critical' : 'alert-warn'}">
+                ${vStatus.isCritical ? '🚨 CRITICAL UPDATE AVAILABLE' : '⚠️ Update Available'}: 
+                Version ${vStatus.latest} is out. You are running ${vStatus.current}.
+            </div>
+        ` : ''}
         
         <div class="stats">
             <div class="card">
@@ -64,6 +79,14 @@ export function handleDashboard(req: http.IncomingMessage, res: http.ServerRespo
             <div class="card">
                 <h2>${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB</h2>
                 <p>Memory Usage</p>
+            </div>
+            <div class="card">
+                <h2>${cacheStats.hits}</h2>
+                <p>Cache Hits</p>
+            </div>
+            <div class="card">
+                <h2>${cacheStats.size}</h2>
+                <p>Cached Tracks</p>
             </div>
         </div>
 

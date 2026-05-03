@@ -1,4 +1,4 @@
-import type { Filters } from '../engine/SessionManager.js'
+import type { AudioFilters as Filters } from '../engine/SessionManager.js'
 
 /**
  * AurisLink Amplitude Controller

@@ -34,7 +34,7 @@ export class Bitcrusher {
       this.stepCount++
 
       if (this.stepCount >= this.downsample) {
-        let left  = buffer.readInt16LE(i)
+        let left = buffer.readInt16LE(i)
         let right = buffer.readInt16LE(i + 2)
 
         // Bit depth reduction

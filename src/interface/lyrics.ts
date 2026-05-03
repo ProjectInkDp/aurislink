@@ -10,6 +10,7 @@ import { sendJson, sendError } from './helpers.js'
 import { httpGetJson } from '../shared/http.js'
 import { decodeTrack } from '../shared/media.js'
 import type { SessionManager } from '../engine/SessionManager.js'
+import type { AurisConfig } from '../typings/index.js'
 
 interface LrcLibLine {
   seconds: number
@@ -120,9 +121,14 @@ export async function handleLyrics(
   res: http.ServerResponse,
   sessionId: string,
   guildId: string,
-  sessions: SessionManager
+  sessions: SessionManager,
+  config: AurisConfig
 ) {
-  const player = sessions.getPlayer(sessionId, guildId)
+  if (config.lyrics?.enabled === false) {
+    return sendError(res, 403, 'Forbidden', 'Lyrics are disabled in the server configuration')
+  }
+
+  const player = sessions.fetchPlayer(sessionId, guildId)
   if (!player) return sendError(res, 404, 'Not Found', 'Player not found')
 
   const encoded = player.track?.encoded ?? null
@@ -132,15 +138,16 @@ export async function handleLyrics(
   try { info = decodeTrack(encoded) } catch { return sendError(res, 400, 'Bad Request', 'Could not decode track') }
 
   let lyrics: LyricsResponse | null = null
+  const providers = config.lyrics?.providers ?? ['deezer', 'lrclib']
 
-  // Deezer tracks: try Deezer lyrics API first
-  if (info.sourceName === 'deezer') {
-    lyrics = await fromDeezer(info.identifier)
-  }
+  for (const provider of providers) {
+    if (provider === 'deezer' && info.sourceName === 'deezer') {
+      lyrics = await fromDeezer(info.identifier)
+    } else if (provider === 'lrclib') {
+      lyrics = await fromLrcLib(info.title, info.author, undefined, info.length)
+    }
 
-  // Fallback: lrclib.net (works for any source)
-  if (!lyrics) {
-    lyrics = await fromLrcLib(info.title, info.author, undefined, info.length)
+    if (lyrics) break
   }
 
   if (!lyrics) return sendError(res, 404, 'Not Found', 'No lyrics found')

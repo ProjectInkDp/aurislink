@@ -2,7 +2,7 @@
 // Vibrato — modulates pitch with a sine LFO via variable delay line.
 // frequency: Hz (default 2.0), depth: 0-1 (default 0.5)
 
-import type { Filters } from '../engine/SessionManager.js'
+import type { AudioFilters as Filters } from '../engine/SessionManager.js'
 import { SAMPLE_RATE } from './constants.js'
 
 function clamp16(v: number): number {
@@ -24,10 +24,10 @@ export function applyVibrato(chunk: Buffer, filters: Filters): Buffer {
   const vb = filters.vibrato
   if (!vb || (vb.depth ?? 0) <= 0) return chunk
 
-  const freq  = Math.max(0, vb.frequency ?? 2.0)
+  const freq = Math.max(0, vb.frequency ?? 2.0)
   const depth = Math.max(0, Math.min(1, vb.depth ?? 0.5))
   const maxDelay = depth * MAX_DELAY_SAMPLES
-  const step  = (2 * Math.PI * freq) / SAMPLE_RATE
+  const step = (2 * Math.PI * freq) / SAMPLE_RATE
   const bufSize = MAX_DELAY_SAMPLES + 2
 
   let st = stateMap.get(vb)
@@ -47,7 +47,7 @@ export function applyVibrato(chunk: Buffer, filters: Filters): Buffer {
     const readF = (st.write - delaySamples + bufSize) % bufSize
     const lo = Math.floor(readF)
     const hi = (lo + 1) % bufSize
-    const t  = readF - lo
+    const t = readF - lo
 
     const outL = st.bufL[lo]! + (st.bufL[hi]! - st.bufL[lo]!) * t
     const outR = st.bufR[lo]! + (st.bufR[hi]! - st.bufR[lo]!) * t

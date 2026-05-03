@@ -4,7 +4,7 @@
 // pitch  — pitch multiplier (default 1.0)
 // rate   — combined speed+pitch shorthand (default 1.0)
 
-import type { Filters } from '../engine/SessionManager.js'
+import type { AudioFilters as Filters } from '../engine/SessionManager.js'
 
 function clamp16(v: number): number {
   return v > 32767 ? 32767 : v < -32768 ? -32768 : v | 0
@@ -42,7 +42,7 @@ export function applyTimescale(chunk: Buffer, filters: Filters): Buffer {
 
     const lo = Math.floor(srcIdx / 2) * 2
     const hi = lo + 2
-    const t  = (srcIdx - lo) / 2  // interpolation factor 0-1
+    const t = (srcIdx - lo) / 2  // interpolation factor 0-1
 
     const sL0 = rawIn[lo]     ?? 0
     const sR0 = rawIn[lo + 1] ?? 0

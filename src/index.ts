@@ -37,7 +37,7 @@ const pluginManager = new PluginManager(config)
 await pluginManager.setup()
 
 log('info', 'AurisLink', '─────────────────────────────────────')
-log('info', 'AurisLink', '  AurisLink v1.9.1-dev — starting up…')
+log('info', 'AurisLink', '  AurisLink v1.9.0 — starting up…')
 log('info', 'AurisLink', '─────────────────────────────────────')
 
 // Async version check

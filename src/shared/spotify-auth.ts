@@ -1,5 +1,6 @@
 import { httpPostJson, httpGet } from './http.js'
 import { log } from './reporter.js'
+import type Vault from '../engine/Vault.js'
 
 export interface SpotifyAuthTokens {
   accessToken: string
@@ -13,9 +14,9 @@ export class SpotifyTokenManager {
   private _clientToken: string | null = null
   private _expiresAt = 0
   private _spDc: string | null = null
-  private _vault: any | null = null
+  private _vault: Vault | null = null
 
-  constructor(spDc?: string, vault?: any) {
+  constructor(spDc?: string, vault?: Vault) {
     this._spDc = spDc || null
     this._vault = vault || null
   }

@@ -75,13 +75,26 @@ export class YoutubeMusicSource implements Source {
     const data = await client.request('search', { query })
     if (!data) return _empty()
 
+    // DEBUG: Dump response to a file for analysis
+    const { writeFileSync } = await import('node:fs')
+    writeFileSync('ytm_response.json', JSON.stringify(data, null, 2))
+    log('info', 'YouTubeMusic', 'Dumped search response to ytm_response.json')
+
     const tracks: Track[] = []
     const sections = data.contents?.tabbedSearchResultsRenderer?.tabs?.[0]?.tabRenderer?.content?.sectionListRenderer?.contents || []
     
     for (const section of sections) {
       const shelf = section.musicShelfRenderer || section.musicCardShelfRenderer
       if (!shelf) continue
-      for (const item of shelf.contents || []) {
+      
+      const contents = shelf.contents || []
+      // Se for musicCardShelfRenderer, o item pode estar direto ou em 'buttons'
+      if (section.musicCardShelfRenderer) {
+        const info = this._extractTrackInfo(section.musicCardShelfRenderer)
+        if (info) tracks.push({ encoded: encodeTrack(info), info, pluginInfo: {} })
+      }
+
+      for (const item of contents) {
         const renderer = item.musicResponsiveListItemRenderer || item
         const info = this._extractTrackInfo(renderer)
         if (info) tracks.push({ encoded: encodeTrack(info), info, pluginInfo: {} })
@@ -93,19 +106,32 @@ export class YoutubeMusicSource implements Source {
 
   private _extractTrackInfo(renderer: any): TrackInfo | null {
     const videoId = renderer.navigationEndpoint?.watchEndpoint?.videoId || 
-                    renderer.title?.runs?.[0]?.navigationEndpoint?.watchEndpoint?.videoId
+                    renderer.title?.runs?.[0]?.navigationEndpoint?.watchEndpoint?.videoId ||
+                    renderer.playlistItemData?.videoId
     if (!videoId) return null
+
+    // Tenta extrair título e autor de diferentes estruturas possíveis
+    const title = renderer.title?.runs?.[0]?.text || 
+                  renderer.flexColumns?.[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.text ||
+                  'Unknown Title'
+    
+    const author = renderer.subtitle?.runs?.[0]?.text ||
+                   renderer.flexColumns?.[1]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.text ||
+                   'Unknown Artist'
+
+    const thumbnails = renderer.thumbnail?.thumbnails || 
+                       renderer.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails || []
 
     return {
       identifier: videoId,
       isSeekable: true,
-      author: renderer.subtitle?.runs?.[0]?.text || 'Unknown Artist',
+      author,
       length: 0,
       isStream: false,
       position: 0,
-      title: renderer.title?.runs?.[0]?.text || 'Unknown Title',
+      title,
       uri: `https://music.youtube.com/watch?v=${videoId}`,
-      artworkUrl: renderer.thumbnail?.thumbnails?.[0]?.url || null,
+      artworkUrl: thumbnails.pop()?.url || null,
       isrc: null,
       sourceName: 'ytmusic'
     }

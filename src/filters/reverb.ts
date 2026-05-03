@@ -15,7 +15,7 @@ declare module '../engine/SessionManager.js' {
 }
 
 const COMB_DELAYS = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617]
-const AP_DELAYS   = [556, 441, 341, 225]
+const AP_DELAYS = [556, 441, 341, 225]
 const STEREO_SPREAD = 23
 const SCALE_ROOM = 0.28
 const OFFSET_ROOM = 0.7
@@ -85,16 +85,16 @@ export function applyReverb(chunk: Buffer, filters: Filters): Buffer {
   const rv = filters.reverb
   if (!rv || (rv.mix ?? 0) <= 0) return chunk
 
-  const mix      = Math.max(0, Math.min(rv.mix ?? 0.3, 1))
+  const mix = Math.max(0, Math.min(rv.mix ?? 0.3, 1))
   const roomSize = Math.max(0, Math.min(rv.roomSize ?? 0.5, 1))
-  const damping  = Math.max(0, Math.min(rv.damping ?? 0.5, 1))
+  const damping = Math.max(0, Math.min(rv.damping ?? 0.5, 1))
 
   let st = stateMap.get(rv)
   if (!st) { st = buildState(); stateMap.set(rv, st) }
 
   // Rebuild coefficients only when params changed
   if (st.lastMix !== mix || st.lastRoomSize !== roomSize || st.lastDamping !== damping) {
-    const fb   = roomSize * SCALE_ROOM + OFFSET_ROOM
+    const fb = roomSize * SCALE_ROOM + OFFSET_ROOM
     const damp = damping  * SCALE_DAMP
     for (const c of [...st.combL, ...st.combR]) c.set(fb, damp)
     st.lastMix = mix; st.lastRoomSize = roomSize; st.lastDamping = damping

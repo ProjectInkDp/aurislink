@@ -93,7 +93,7 @@ export class Equalizer {
     if (this.activeBands.every(g => g === 0)) return buffer
 
     for (let i = 0; i < buffer.length; i += 4) {
-      let left  = buffer.readInt16LE(i)
+      let left = buffer.readInt16LE(i)
       let right = buffer.readInt16LE(i + 2)
 
       for (const node of this.nodes) {

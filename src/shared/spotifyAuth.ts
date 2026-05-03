@@ -53,7 +53,7 @@ export const AURIS_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/5
 
 // ─── Auth config (set via configureSpotifyAuth) ───────────────────────────────
 
-let _clientId     = ''
+let _clientId = ''
 let _clientSecret = ''
 let _customEndpoint = ''
 let _preferAnonymous = true
@@ -302,7 +302,7 @@ export async function getAurisLocalToken(
   // Try primary hardcoded secret first, then remote
   try {
     const fb = ENCODED_SECRETS[0]!
-    const secret  = _decodeSecret(fb.secret).toString('hex')
+    const secret = _decodeSecret(fb.secret).toString('hex')
     const version = String(fb.version)
     return await _performTokenRequest(secret, version, spDc, productType)
   } catch {
@@ -321,9 +321,9 @@ async function _performTokenRequest(
 ): Promise<SpotifyTokenResponse> {
   const isWebPlayer = productType === 'web-player'
   const serverTimeMs = isWebPlayer ? Date.now() : await _getServerTime(spDc)
-  const localTimeMs  = Date.now()
+  const localTimeMs = Date.now()
 
-  const totpLocal  = _generateTOTP(secret, localTimeMs, 30)
+  const totpLocal = _generateTOTP(secret, localTimeMs, 30)
   const totpServer = _generateTOTP(secret, serverTimeMs, 900)
 
   const url = new URL('https://open.spotify.com/api/token')

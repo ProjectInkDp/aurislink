@@ -42,7 +42,7 @@ export function applyTimescale(chunk: Buffer, filters: Filters): Buffer {
 
     const lo = Math.floor(srcIdx / 2) * 2
     const hi = lo + 2
-    const t  = (srcIdx - lo) / 2  // interpolation factor 0-1
+    const t = (srcIdx - lo) / 2  // interpolation factor 0-1
 
     const sL0 = rawIn[lo]     ?? 0
     const sR0 = rawIn[lo + 1] ?? 0

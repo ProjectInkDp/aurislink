@@ -33,8 +33,8 @@ import type GuardManager from '../engine/Guard.js'
 
 const SESSION_RE = /^\/v4\/sessions\/([^/]+)$/
 const PLAYERS_RE = /^\/v4\/sessions\/([^/]+)\/players$/
-const PLAYER_RE  = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)$/
-const LYRICS_RE  = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/track\/lyrics$/
+const PLAYER_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)$/
+const LYRICS_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/track\/lyrics$/
 const LYRICS_SUB_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/lyrics\/subscribe$/
 const FILTERS_RE = /^\/v4\/sessions\/([^/]+)\/players\/([^/]+)\/filters$/
 

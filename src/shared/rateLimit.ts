@@ -47,7 +47,7 @@ const CLEANUP_INTERVAL_MS = 30_000
  * @example
  * ```ts
  * const limiter = new RateLimiter(config.rateLimit)
- * const result  = limiter.check(req)
+ * const result = limiter.check(req)
  * if (!result.allowed) { res.writeHead(429); res.end(); return }
  * applyRateLimitHeaders(res, result)
  * ```
@@ -78,9 +78,9 @@ export class RateLimiter {
     const pathname = this._pathname(req)
     if (this.cfg.ignorePaths.some(p => pathname.startsWith(p))) return { allowed: true }
 
-    const now     = Date.now()
-    const ip      = this._resolveIp(req)
-    const userId  = this._header(req, 'user-id')
+    const now = Date.now()
+    const ip = this._resolveIp(req)
+    const userId = this._header(req, 'user-id')
     const guildId = this._guildFromPath(pathname)
 
     // Global scope — reject immediately if exceeded
@@ -140,8 +140,8 @@ export class RateLimiter {
     rule: { maxRequests: number; windowMs: number },
     now: number,
   ): AurisRateLimitResult {
-    const key    = `${type}:${id}`
-    const entry  = this._bucket(key, now)
+    const key = `${type}:${id}`
+    const entry = this._bucket(key, now)
     const cutoff = now - rule.windowMs
 
     // Advance head past expired timestamps
@@ -157,9 +157,9 @@ export class RateLimiter {
     }
 
     const active = entry.timestamps.length - entry.head
-    const limit  = Math.max(1, rule.maxRequests)
+    const limit = Math.max(1, rule.maxRequests)
     const oldest = entry.timestamps[entry.head] ?? now
-    const reset  = oldest + rule.windowMs
+    const reset = oldest + rule.windowMs
 
     if (active >= limit) {
       return { allowed: false, limit, remaining: 0, reset, scope: type }
@@ -215,7 +215,7 @@ export class RateLimiter {
     const max = this.cfg.maxEntries
     if (this.store.size <= max) return
 
-    const sorted   = [...this.store.entries()].sort((a, b) => a[1].lastSeen - b[1].lastSeen)
+    const sorted = [...this.store.entries()].sort((a, b) => a[1].lastSeen - b[1].lastSeen)
     const overflow = this.store.size - max
     for (let i = 0; i < overflow; i++) {
       const pair = sorted[i]
@@ -226,8 +226,8 @@ export class RateLimiter {
   /** Resolves the real client IP, honouring X-Forwarded-For when trustProxy is on. */
   private _resolveIp(req: http.IncomingMessage): string | null {
     const socket = (req.socket as { remoteAddress?: string })?.remoteAddress
-    const fwd    = this._header(req, 'x-forwarded-for')
-    const raw    = this.cfg.trustProxy && fwd ? fwd.split(',')[0]?.trim() : socket ?? fwd
+    const fwd = this._header(req, 'x-forwarded-for')
+    const raw = this.cfg.trustProxy && fwd ? fwd.split(',')[0]?.trim() : socket ?? fwd
     return this._normaliseIp(raw)
   }
 

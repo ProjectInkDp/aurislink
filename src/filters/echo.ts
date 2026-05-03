@@ -32,7 +32,7 @@ const stateMap = new WeakMap<NonNullable<Filters['echo']>, EchoState>()
 function lerp(buf: Float64Array, pos: number): number {
   const lo = Math.floor(pos) % buf.length
   const hi = (lo + 1) % buf.length
-  const t  = pos - Math.floor(pos)
+  const t = pos - Math.floor(pos)
   return (buf[lo] ?? 0) + ((buf[hi] ?? 0) - (buf[lo] ?? 0)) * t
 }
 
@@ -40,10 +40,10 @@ export function applyEcho(chunk: Buffer, filters: Filters): Buffer {
   const ec = filters.echo
   if (!ec || (ec.delay ?? 0) <= 0) return chunk
 
-  const delay    = Math.min(ec.delay ?? 300, MAX_DELAY_MS)
+  const delay = Math.min(ec.delay ?? 300, MAX_DELAY_MS)
   const feedback = Math.max(0, Math.min(ec.feedback ?? 0.4, 0.95))
-  const wet      = Math.max(0, Math.min(ec.mix ?? 0.5, 1))
-  const dry      = 1 - wet
+  const wet = Math.max(0, Math.min(ec.mix ?? 0.5, 1))
+  const dry = 1 - wet
   const delaySamples = (delay * SAMPLE_RATE) / 1000
 
   let st = stateMap.get(ec)

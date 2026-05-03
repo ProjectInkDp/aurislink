@@ -16,9 +16,9 @@ export function applyTremolo(chunk: Buffer, filters: Filters): Buffer {
   const tr = filters.tremolo
   if (!tr || (tr.depth ?? 0) <= 0) return chunk
 
-  const freq  = Math.max(0, tr.frequency ?? 2.0)
+  const freq = Math.max(0, tr.frequency ?? 2.0)
   const depth = Math.max(0, Math.min(1, tr.depth ?? 0.5))
-  const step  = (2 * Math.PI * freq) / SAMPLE_RATE
+  const step = (2 * Math.PI * freq) / SAMPLE_RATE
 
   let state = phaseMap.get(tr)
   if (!state) { state = { phase: 0 }; phaseMap.set(tr, state) }

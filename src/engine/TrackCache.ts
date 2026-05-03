@@ -8,12 +8,12 @@ import { log } from '../shared/reporter.js'
 
 // ─── Internal constants ───────────────────────────────────────────────────────
 
-const AURIS_CACHE_SALT       = 'aurislink-track-cache'
-const CACHE_STORE_VERSION    = 1
-const DEFAULT_CACHE_PATH     = './.auris-cache/tracks.bin'
+const AURIS_CACHE_SALT = 'aurislink-track-cache'
+const CACHE_STORE_VERSION = 1
+const DEFAULT_CACHE_PATH = './.auris-cache/tracks.bin'
 const DEFAULT_FLUSH_DELAY_MS = 4_000
-const DEFAULT_TTL_MS         = 1_000 * 60 * 60 * 6   // 6 hours
-const DEFAULT_MAX_ENTRIES    = 4_000
+const DEFAULT_TTL_MS = 1_000 * 60 * 60 * 6   // 6 hours
+const DEFAULT_MAX_ENTRIES = 4_000
 const DEFAULT_SWEEP_INTERVAL = 60_000                 // 1 minute
 
 // ─── Type helpers ─────────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ export default class TrackCache {
    * Returns null if not found or expired.
    */
   get<T = unknown>(source: string, identifier: string): T | null {
-    const key   = `${source}:${identifier}`
+    const key = `${source}:${identifier}`
     const entry = this.store.get(key)
     if (!entry) return null
 
@@ -195,10 +195,10 @@ export default class TrackCache {
         entries:   Object.fromEntries(this.store)
       })
 
-      const iv      = crypto.randomBytes(16)
-      const cipher  = crypto.createCipheriv('aes-256-gcm', this.key, iv)
+      const iv = crypto.randomBytes(16)
+      const cipher = crypto.createCipheriv('aes-256-gcm', this.key, iv)
       const payload = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()])
-      const tag     = cipher.getAuthTag()
+      const tag = cipher.getAuthTag()
 
       await fs.mkdir('./.auris-cache', { recursive: true })
       await fs.writeFile(this.cachePath, Buffer.concat([iv, tag, payload]))
@@ -254,8 +254,8 @@ export default class TrackCache {
   }
 
   private _decode(data: Buffer, key: Buffer): Record<string, TrackCacheEntry<unknown>> {
-    const iv        = data.subarray(0, 16)
-    const tag       = data.subarray(16, 32)
+    const iv = data.subarray(0, 16)
+    const tag = data.subarray(16, 32)
     const encrypted = data.subarray(32)
 
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv)

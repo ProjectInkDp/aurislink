@@ -14,10 +14,10 @@ import type Vault from '../engine/Vault.js'
 
 // ─── Internal constants ───────────────────────────────────────────────────────
 
-const YANDEX_API_BASE  = 'https://api.music.yandex.net'
-const YANDEX_UA        = 'Yandex-Music-API'
+const YANDEX_API_BASE = 'https://api.music.yandex.net'
+const YANDEX_UA = 'Yandex-Music-API'
 const YANDEX_CLIENT_HDR = 'YandexMusicAndroid/24023621'
-const SIGN_SECRET      = 'p93jhgh689SBReK6ghtw62'
+const SIGN_SECRET = 'p93jhgh689SBReK6ghtw62'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -127,7 +127,7 @@ export default class YandexMusicLyrics {
   /** Search for a track and return its Yandex numeric ID. */
   private async _resolveTrackId(title: string, artist: string): Promise<string | null> {
     const query = encodeURIComponent(`${title} ${artist}`)
-    const url   = `${YANDEX_API_BASE}/search?type=track&text=${query}&page=0&pageSize=5`
+    const url = `${YANDEX_API_BASE}/search?type=track&text=${query}&page=0&pageSize=5`
 
     let body: YandexSearchResponse | null
     try {

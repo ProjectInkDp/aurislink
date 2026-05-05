@@ -1,5 +1,6 @@
 import { httpGet, httpPostJson } from '../shared/http.js'
 import { log } from '../shared/reporter.js'
+import { poTokenProvider } from '../shared/po-token.js'
 
 export type InnerTubeClientType = 'WEB' | 'WEB_REMIX' | 'ANDROID' | 'ANDROID_MUSIC' | 'IOS' | 'TVHTML5' | 'TVHTML5_SIMPLY'
 
@@ -35,7 +36,9 @@ export class InnerTubeClient {
       const visitorDataMatch = res.body.match(/"VISITOR_DATA":"([^"]+)"/)
       const clientVersionMatch = res.body.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/)
 
-      if (apiKeyMatch && visitorDataMatch) {
+      const poData = await poTokenProvider.getToken()
+
+      if (apiKeyMatch && (visitorDataMatch || poData)) {
         let version = clientVersionMatch ? clientVersionMatch[1]! : '2.20240501.01.00'
         
         // Versões fixas baseadas no plugin do Lavalink para clientes móveis/TV
@@ -46,8 +49,9 @@ export class InnerTubeClient {
 
         this._context = {
           apiKey: apiKeyMatch[1]!,
-          visitorData: visitorDataMatch[1]!,
-          clientVersion: version
+          visitorData: poData?.visitorData || visitorDataMatch?.[1] || '',
+          clientVersion: version,
+          poToken: poData?.poToken
         }
         this._lastRefresh = Date.now()
         log('info', `InnerTube[${this._type}]`, 'Tokens refreshed successfully.')

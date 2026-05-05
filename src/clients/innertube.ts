@@ -7,6 +7,7 @@ export interface InnerTubeContext {
   apiKey: string
   visitorData: string
   clientVersion: string
+  poToken?: string
 }
 
 export class InnerTubeClient {
@@ -58,11 +59,11 @@ export class InnerTubeClient {
 
   private _getUserAgent(type: InnerTubeClientType, version: string): string {
     switch (type) {
-      case 'ANDROID': return `com.google.android.youtube/${version} (Linux; U; Android 11) gzip`
-      case 'ANDROID_MUSIC': return `com.google.android.apps.youtube.music/${version} (Linux; U; Android 11) gzip`
-      case 'TVHTML5': return 'Mozilla/5.0 (ChromiumStylePlatform) Cobalt/Version'
-      case 'WEB_REMIX': return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      default: return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      case 'ANDROID': return `com.google.android.youtube/${version} (Linux; U; Android 14; pt_BR; SM-S918B; Build/UP1A.231005.007) gzip`
+      case 'ANDROID_MUSIC': return `com.google.android.apps.youtube.music/${version} (Linux; U; Android 14; pt_BR; SM-S918B; Build/UP1A.231005.007) gzip`
+      case 'TVHTML5': return `Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.105 Safari/537.36 SmartTV/10.0 (NetCast)`
+      case 'WEB_REMIX': return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+      default: return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
     }
   }
 
@@ -93,7 +94,8 @@ export class InnerTubeClient {
           gl: 'BR',
           utcOffsetMinutes: -180,
           visitorData: ctx.visitorData,
-          ...(this._type.startsWith('ANDROID') ? { androidSdkVersion: 34, osVersion: '14' } : { osName: 'Windows', osVersion: '10.0', platform: 'DESKTOP' })
+          ...(this._type.startsWith('ANDROID') ? { androidSdkVersion: 34, osVersion: '14' } : { osName: 'Windows', osVersion: '10.0', platform: 'DESKTOP' }),
+          ...(ctx.poToken ? { serviceIntegrityDimensions: { poToken: ctx.poToken } } : {})
         },
         user: { lockedSafetyMode: false }
       },
@@ -104,7 +106,12 @@ export class InnerTubeClient {
       headers: {
         'User-Agent': userAgent,
         'X-Youtube-Client-Name': this._getClientCode(this._type).toString(),
-        'X-Youtube-Client-Version': ctx.clientVersion
+        'X-Youtube-Client-Version': ctx.clientVersion,
+        'Origin': 'https://www.youtube.com',
+        'Referer': 'https://www.youtube.com/',
+        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin'
       }
     })
 

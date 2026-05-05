@@ -38,10 +38,10 @@ export class InnerTubeClient {
         let version = clientVersionMatch ? clientVersionMatch[1]! : '2.20240501.01.00'
         
         // Versões fixas baseadas no plugin do Lavalink para clientes móveis/TV
-        if (this._type === 'ANDROID') version = '19.44.38'
-        if (this._type === 'ANDROID_MUSIC') version = '7.27.52'
-        if (this._type === 'TVHTML5') version = '7.20250319.10.00'
-        if (this._type === 'WEB_REMIX') version = '1.20260428.11.00'
+        if (this._type === 'ANDROID') version = '19.48.34'
+        if (this._type === 'ANDROID_MUSIC') version = '7.29.53'
+        if (this._type === 'TVHTML5') version = '7.20260115.10.00'
+        if (this._type === 'WEB_REMIX') version = '1.20260501.11.00'
 
         this._context = {
           apiKey: apiKeyMatch[1]!,
@@ -89,11 +89,13 @@ export class InnerTubeClient {
         client: {
           clientName: this._type,
           clientVersion: ctx.clientVersion,
-          hl: 'en',
-          gl: 'US',
+          hl: 'pt',
+          gl: 'BR',
+          utcOffsetMinutes: -180,
           visitorData: ctx.visitorData,
-          ...(this._type.startsWith('ANDROID') ? { androidSdkVersion: 30 } : {})
-        }
+          ...(this._type.startsWith('ANDROID') ? { androidSdkVersion: 34, osVersion: '14' } : { osName: 'Windows', osVersion: '10.0', platform: 'DESKTOP' })
+        },
+        user: { lockedSafetyMode: false }
       },
       ...payload
     }

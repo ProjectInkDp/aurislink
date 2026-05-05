@@ -1,0 +1,33 @@
+name: Smart NPM Publish (Dev)
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          
+      - name: Install Dependencies
+        run: npm install
+        
+      - name: Build
+        run: npm run build
+        
+      - name: Publish @dev
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          HASH=$(git rev-parse --short HEAD)
+          npm version "${VERSION}-dev.${HASH}" --no-git-tag-version
+          npm publish --tag dev
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

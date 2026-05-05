@@ -6,7 +6,7 @@ import { log } from '../shared/reporter.js'
 import { sendJson, sendError } from './helpers.js'
 
 // Matches "scsearch:query", "ytsearch:query", "search:query", etc.
-const PREFIX_RE = /^([a-z]+)(?:search)?:(.+)$/i
+const PREFIX_RE = /^([a-z]+)search:(.+)$|^search:(.+)$/i
 
 export async function handleLoadTracks(
   _req: http.IncomingMessage,
@@ -27,9 +27,9 @@ export async function handleLoadTracks(
     // Search prefix (e.g. scsearch:lofi or search:lofi)
     const prefixMatch = identifier.match(PREFIX_RE)
     if (prefixMatch) {
-      let prefix = prefixMatch[1]!.toLowerCase()
+      let prefix = (prefixMatch[1] || 'search').toLowerCase()
       if (prefix !== 'search' && !prefix.endsWith('search')) prefix += 'search'
-      const query = prefixMatch[2]!.trim()
+      const query = (prefixMatch[2] || prefixMatch[3])!.trim()
 
       if (!query) {
         return sendError(res, 400, 'Bad Request', 'Search query cannot be empty')

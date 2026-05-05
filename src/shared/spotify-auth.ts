@@ -32,7 +32,7 @@ export class SpotifyTokenManager {
 
     // 2. Check Vault (Secure Persistence)
     if (this._vault) {
-      const cached = this._vault.get<SpotifyAuthTokens>(`spotify_auth_${this._spDc || 'anon'}`)
+      const cached = (this._vault as any).get(`spotify_auth_${this._spDc || 'anon'}`) as SpotifyAuthTokens | null
       if (cached && Date.now() < cached.expiresAt) {
         this._accessToken = cached.accessToken
         this._expiresAt = cached.expiresAt

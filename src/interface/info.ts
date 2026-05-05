@@ -26,7 +26,7 @@ const SERVER_INFO = {
   },
   jvm: process.version,
   lavalink: 'AurisLink',
-  sourceManagers: ['soundcloud', 'deezer', 'jiosaavn', 'spotify'],
+  sourceManagers: ['youtube', 'ytmusic', 'soundcloud', 'deezer', 'jiosaavn', 'spotify', 'applemusic'],
   filters: [
     'equalizer', 'timescale', 'tremolo', 'vibrato',
     'rotation', 'channelMix', 'lowPass', 'echo', 'reverb', 'volume', 'distortion'

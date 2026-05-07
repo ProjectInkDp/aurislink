@@ -1,71 +1,71 @@
 # AurisLink Test Suite
 
-Testes automatizados para o AurisLink com cobertura de cache, retry e providers.
+Automated tests for AurisLink with coverage for cache, retry, and providers.
 
-## 📋 Estrutura
+## 📋 Structure
 
 ```
 tests/
-├── cache.test.ts       # Testes do sistema de cache inteligente
-├── retry.test.ts       # Testes do retry com backoff exponencial
-├── providers.test.ts   # Testes dos providers (YouTube, etc)
-└── README.md           # Este arquivo
+├── cache.test.ts       # Tests for intelligent cache system
+├── retry.test.ts       # Tests for retry with exponential backoff
+├── providers.test.ts   # Tests for providers (YouTube, etc)
+└── README.md           # This file
 ```
 
-## 🚀 Como Rodar
+## 🚀 Running Tests
 
-### Rodar todos os testes
+### Run all tests
 ```bash
 npm test
 ```
 
-### Modo watch (rerun ao salvar)
+### Watch mode (rerun on save)
 ```bash
 npm run test:watch
 ```
 
-### Com cobertura de código
+### With code coverage
 ```bash
 npm run test:coverage
 ```
 
-### Rodar teste específico
+### Run specific test
 ```bash
 npm test -- cache.test.ts
 npm test -- retry.test.ts
 npm test -- providers.test.ts
 ```
 
-## 📊 Cobertura de Testes
+## 📊 Test Coverage
 
-### Cache Tests (15+ testes)
-- ✅ Operações básicas (set, get, delete, clear)
-- ✅ Expiração de TTL
-- ✅ Eviction LRU (Least Recently Used)
-- ✅ Estatísticas (hits, misses, hit rate)
-- ✅ Limpeza automática
+### Cache Tests (15+ tests)
+- ✅ Basic operations (set, get, delete, clear)
+- ✅ TTL expiration
+- ✅ LRU eviction (Least Recently Used)
+- ✅ Statistics (hits, misses, hit rate)
+- ✅ Automatic cleanup
 
-**Arquivo:** `cache.test.ts`
+**File:** `cache.test.ts`
 
 ```typescript
-// Exemplo de uso
-const cache = new IntelligentCache(3600, 100) // 1 hora, max 100 entries
+// Usage example
+const cache = new IntelligentCache(3600, 100) // 1 hour, max 100 entries
 cache.set('key1', 'value1')
 const value = cache.get('key1')
 const stats = cache.getStats()
 ```
 
-### Retry Tests (20+ testes)
-- ✅ Execução bem-sucedida
-- ✅ Retry automático
+### Retry Tests (20+ tests)
+- ✅ Successful execution
+- ✅ Automatic retry
 - ✅ Exponential backoff (100ms → 200ms → 400ms)
-- ✅ Detecção de erros retentáveis
-- ✅ Lógica customizada de retry
+- ✅ Retryable error detection
+- ✅ Custom retry logic
 
-**Arquivo:** `retry.test.ts`
+**File:** `retry.test.ts`
 
 ```typescript
-// Exemplo de uso
+// Usage example
 const result = await RetryManager.execute(
   () => fetchFromYouTube(),
   {
@@ -83,22 +83,22 @@ if (result.success) {
 }
 ```
 
-### Provider Tests (10+ testes)
-- ✅ Inicialização de providers
-- ✅ Validação de URLs
-- ✅ Setup e configuração
+### Provider Tests (10+ tests)
+- ✅ Provider initialization
+- ✅ URL validation
+- ✅ Setup and configuration
 - ✅ Cookie generation
 
-**Arquivo:** `providers.test.ts`
+**File:** `providers.test.ts`
 
 ```typescript
-// Exemplo de uso
+// Usage example
 const config = createMockConfig()
 const youtube = new YoutubeSource(config)
 await youtube.setup()
 ```
 
-## 📈 Resultados Atuais
+## 📈 Current Results
 
 ```
 Test Suites: 3 total
@@ -112,18 +112,18 @@ Coverage:
   Branches:    ~60%
 ```
 
-## 🔧 Configuração Jest
+## 🔧 Jest Configuration
 
-**Arquivo:** `jest.config.js`
+**File:** `jest.config.js`
 
 - Preset: `ts-jest/presets/default-esm`
 - Environment: `node`
-- Timeout: 10 segundos
-- Module mapper: Suporta imports com `.js`
+- Timeout: 10 seconds
+- Module mapper: Supports `.js` imports
 
-## 📝 Escrevendo Novos Testes
+## 📝 Writing New Tests
 
-### Template básico
+### Basic template
 ```typescript
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals'
 
@@ -145,44 +145,44 @@ describe('MyFeature', () => {
 })
 ```
 
-### Boas práticas
-1. Use `describe` para agrupar testes relacionados
-2. Use `beforeEach` para setup comum
-3. Use `afterEach` para limpeza
-4. Escreva testes independentes (não dependem um do outro)
-5. Use nomes descritivos: `should...`, `should not...`
-6. Teste casos de sucesso E falha
+### Best practices
+1. Use `describe` to group related tests
+2. Use `beforeEach` for common setup
+3. Use `afterEach` for cleanup
+4. Write independent tests (don't depend on each other)
+5. Use descriptive names: `should...`, `should not...`
+6. Test both success AND failure cases
 
 ## 🐛 Troubleshooting
 
-### Erro: "Cannot find module"
-Certifique-se de que o build foi feito:
+### Error: "Cannot find module"
+Make sure build was run:
 ```bash
 npm run build
 npm test
 ```
 
-### Testes lentos
-Aumente o timeout em `jest.config.js`:
+### Slow tests
+Increase timeout in `jest.config.js`:
 ```javascript
-testTimeout: 20000 // 20 segundos
+testTimeout: 20000 // 20 seconds
 ```
 
-### Erro de TypeScript
-Verifique se `ts-jest` está instalado:
+### TypeScript error
+Check if `ts-jest` is installed:
 ```bash
 npm install --save-dev ts-jest @types/jest
 ```
 
-## 🚀 Próximos Passos
+## 🚀 Next Steps
 
-- [ ] Adicionar testes de integração com servidor real
-- [ ] Aumentar cobertura para 80%+
-- [ ] Adicionar testes de carga
-- [ ] Integrar com CI/CD pipeline
-- [ ] Gerar relatório de cobertura em HTML
+- [ ] Add integration tests with real server
+- [ ] Increase coverage to 80%+
+- [ ] Add load tests
+- [ ] Integrate with CI/CD pipeline
+- [ ] Generate HTML coverage report
 
-## 📚 Referências
+## 📚 References
 
 - [Jest Documentation](https://jestjs.io/)
 - [ts-jest Documentation](https://kulshekhar.github.io/ts-jest/)

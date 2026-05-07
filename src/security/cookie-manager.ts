@@ -23,11 +23,17 @@ export interface CookieJar {
 export class CookieManager {
   private _cookies: CookieJar = {}
   private _filePath: string | null = null
+  private _cookieMetadata: Map<string, { expiration?: number; secure?: boolean }> = new Map()
+  private _lastRefresh = 0
+  private _refreshInterval = 24 * 60 * 60 * 1000 // 24 hours
 
-  constructor(filePath?: string) {
+  constructor(filePath?: string, autoRefreshInterval?: number) {
     if (filePath) {
       this._filePath = filePath
       this.load()
+    }
+    if (autoRefreshInterval) {
+      this._refreshInterval = autoRefreshInterval
     }
   }
 
@@ -45,6 +51,9 @@ export class CookieManager {
       const content = readFileSync(this._filePath, 'utf-8')
       const lines = content.split('\n')
 
+      this._cookies = {}
+      this._cookieMetadata.clear()
+
       for (const line of lines) {
         // Skip comments and empty lines
         if (line.startsWith('#') || !line.trim()) continue
@@ -56,9 +65,17 @@ export class CookieManager {
         const cookieKey = `${domain}:${name}`
         this._cookies[cookieKey] = value
 
+        // Store metadata for validation
+        const expirationTime = parseInt(expiration, 10) * 1000
+        this._cookieMetadata.set(cookieKey, {
+          expiration: expirationTime,
+          secure: secure === 'TRUE',
+        })
+
         log('debug', 'CookieManager', `Loaded cookie: ${name} from ${domain}`)
       }
 
+      this._lastRefresh = Date.now()
       log('info', 'CookieManager', `Successfully loaded ${Object.keys(this._cookies).length} cookies from ${this._filePath}`)
       return true
     } catch (err) {
@@ -97,6 +114,61 @@ export class CookieManager {
   }
 
   /**
+   * Get valid (non-expired) cookies
+   */
+  getValidCookies(): CookieJar {
+    const validCookies: CookieJar = {}
+    const now = Date.now()
+
+    for (const [key, value] of Object.entries(this._cookies)) {
+      const metadata = this._cookieMetadata.get(key)
+      if (!metadata || !metadata.expiration || metadata.expiration > now) {
+        validCookies[key] = value
+      }
+    }
+
+    return validCookies
+  }
+
+  /**
+   * Get expired cookies
+   */
+  getExpiredCookies(): string[] {
+    const expired: string[] = []
+    const now = Date.now()
+
+    for (const [key, metadata] of this._cookieMetadata.entries()) {
+      if (metadata.expiration && metadata.expiration <= now) {
+        expired.push(key)
+      }
+    }
+
+    return expired
+  }
+
+  /**
+   * Check if cookies need refresh (based on expiration or time interval)
+   */
+  needsRefresh(): boolean {
+    const expired = this.getExpiredCookies()
+    const timeSinceRefresh = Date.now() - this._lastRefresh
+    return expired.length > 0 || timeSinceRefresh > this._refreshInterval
+  }
+
+  /**
+   * Get cookie validity status
+   */
+  getStatus(): { total: number; valid: number; expired: number; refreshNeeded: boolean } {
+    const expired = this.getExpiredCookies()
+    return {
+      total: Object.keys(this._cookies).length,
+      valid: Object.keys(this._cookies).length - expired.length,
+      expired: expired.length,
+      refreshNeeded: this.needsRefresh(),
+    }
+  }
+
+  /**
    * Check if cookies are loaded
    */
   isLoaded(): boolean {
@@ -111,10 +183,40 @@ export class CookieManager {
   }
 
   /**
+   * Get valid cookie count
+   */
+  getValidCount(): number {
+    return Object.keys(this.getValidCookies()).length
+  }
+
+  /**
    * Clear all cookies
    */
   clear(): void {
     this._cookies = {}
+    this._cookieMetadata.clear()
     log('info', 'CookieManager', 'All cookies cleared')
+  }
+
+  /**
+   * Remove expired cookies
+   */
+  removeExpired(): number {
+    const expired = this.getExpiredCookies()
+    for (const key of expired) {
+      delete this._cookies[key]
+      this._cookieMetadata.delete(key)
+    }
+    if (expired.length > 0) {
+      log('info', 'CookieManager', `Removed ${expired.length} expired cookies`)
+    }
+    return expired.length
+  }
+
+  /**
+   * Get cookie header with only valid cookies
+   */
+  getValidCookieHeader(): string {
+    return Object.values(this.getValidCookies()).join('; ')
   }
 }

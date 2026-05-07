@@ -108,6 +108,10 @@ export interface AurisConfig {
       enabled: boolean
       clients?: string[]
       allowFallback?: boolean
+      cookies?: {
+        enabled: boolean
+        path: string
+      }
     }
     ytmusic?: {
       enabled: boolean

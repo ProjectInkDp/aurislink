@@ -1,5 +1,6 @@
 import { httpGet, httpPostJson } from '../shared/http.js'
 import { log } from '../shared/reporter.js'
+import type { CookieManager } from '../security/cookie-manager.js'
 import { poTokenProvider } from '../shared/po-token.js'
 
 export type InnerTubeClientType = 'WEB' | 'WEB_REMIX' | 'ANDROID' | 'ANDROID_MUSIC' | 'IOS' | 'TVHTML5' | 'TVHTML5_SIMPLY'
@@ -15,8 +16,19 @@ export class InnerTubeClient {
   private _context: InnerTubeContext | null = null
   private _lastRefresh = 0
   private _refreshInterval = 3600 * 1000
+  private _cookieManager: CookieManager | null = null
 
-  constructor(private _type: InnerTubeClientType = 'WEB_REMIX') {}
+  constructor(private _type: InnerTubeClientType = 'WEB_REMIX', cookieManager?: CookieManager) {
+    this._cookieManager = cookieManager || null
+  }
+
+  /**
+   * Set cookie manager for this client
+   */
+  setCookieManager(cookieManager: CookieManager | null): void {
+    this._cookieManager = cookieManager
+    log('info', `InnerTube[${this._type}]`, `Cookie manager ${cookieManager ? 'enabled' : 'disabled'}`)
+  }
 
   async getContext(): Promise<InnerTubeContext | null> {
     if (!this._context || (Date.now() - this._lastRefresh > this._refreshInterval)) {
@@ -29,7 +41,14 @@ export class InnerTubeClient {
     log('info', `InnerTube[${this._type}]`, 'Refreshing tokens...')
     try {
       const url = this._type === 'WEB_REMIX' ? 'https://music.youtube.com/' : 'https://www.youtube.com/'
-      const res = await httpGet(url)
+      const opts: any = {}
+      if (this._cookieManager && this._cookieManager.isLoaded()) {
+        const cookieHeader = this._cookieManager.getCookieHeader()
+        if (cookieHeader) {
+          opts.headers = { 'Cookie': cookieHeader }
+        }
+      }
+      const res = await httpGet(url, opts)
       if (!res) return
 
       const apiKeyMatch = res.body.match(/"INNERTUBE_API_KEY":"([^"]+)"/)
@@ -106,18 +125,26 @@ export class InnerTubeClient {
       ...payload
     }
 
-    const res = await httpPostJson(url, fullPayload, {
-      headers: {
-        'User-Agent': userAgent,
-        'X-Youtube-Client-Name': this._getClientCode(this._type).toString(),
-        'X-Youtube-Client-Version': ctx.clientVersion,
-        'Origin': 'https://www.youtube.com',
-        'Referer': 'https://www.youtube.com/',
-        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-origin'
+    const headers: Record<string, string> = {
+      'User-Agent': userAgent,
+      'X-Youtube-Client-Name': this._getClientCode(this._type).toString(),
+      'X-Youtube-Client-Version': ctx.clientVersion,
+      'Origin': 'https://www.youtube.com',
+      'Referer': 'https://www.youtube.com/',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'same-origin'
+    }
+
+    // Add cookies if available
+    if (this._cookieManager && this._cookieManager.isLoaded()) {
+      const cookieHeader = this._cookieManager.getCookieHeader()
+      if (cookieHeader) {
+        headers['Cookie'] = cookieHeader
       }
-    })
+    }
+
+    const res = await httpPostJson(url, fullPayload, { headers })
 
     if (!res || res.status !== 200) return null
     try {

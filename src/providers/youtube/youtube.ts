@@ -1,4 +1,5 @@
 import { InnerTubeClient, type InnerTubeClientType } from '../../clients/innertube.js'
+import { CookieManager } from '../../security/cookie-manager.js'
 import { encodeTrack } from '../../shared/media.js'
 import { log } from '../../shared/reporter.js'
 import type { LoadResult, Source, Track, TrackInfo, AurisConfig } from '../../typings/index.js'
@@ -9,14 +10,24 @@ export class YoutubeSource implements Source {
   
   private _clients: InnerTubeClient[] = []
   private _allowFallback: boolean
+  private _cookieManager: CookieManager | null = null
 
   constructor(config: AurisConfig) {
     const yt = config.sources.youtube ?? { enabled: false }
     const clientTypes = (yt.clients as InnerTubeClientType[]) || ['WEB', 'TVHTML5', 'ANDROID']
     this._allowFallback = yt.allowFallback ?? true
 
+    // Initialize cookie manager if cookies file is configured
+    if (yt.cookies?.enabled && yt.cookies?.path) {
+      this._cookieManager = new CookieManager(yt.cookies.path)
+      if (this._cookieManager.isLoaded()) {
+        log('info', 'YouTube', `Loaded ${this._cookieManager.getCount()} cookies from ${yt.cookies.path}`)
+      }
+    }
+
     for (const type of clientTypes) {
-      this._clients.push(new InnerTubeClient(type))
+      const client = new InnerTubeClient(type, this._cookieManager || undefined)
+      this._clients.push(client)
     }
   }
 
@@ -25,7 +36,22 @@ export class YoutubeSource implements Source {
     for (const client of this._clients) {
       if (await client.getContext()) anyOk = true
     }
+    
+    if (anyOk && this._cookieManager?.isLoaded()) {
+      log('info', 'YouTube', `Setup complete with ${this._cookieManager.getCount()} cookies`)
+    }
+    
     return anyOk
+  }
+
+  /**
+   * Update cookie manager (useful for runtime cookie updates)
+   */
+  setCookies(cookieManager: CookieManager | null): void {
+    this._cookieManager = cookieManager
+    for (const client of this._clients) {
+      client.setCookieManager(cookieManager)
+    }
   }
 
   accepts(url: string): boolean {
@@ -104,6 +130,14 @@ export class YoutubeSource implements Source {
     const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/)
     return match ? match[1]! : null
   }
+
+  /**
+   * Get cookie manager instance
+   */
+  getCookieManager(): CookieManager | null {
+    return this._cookieManager
+  }
 }
 
 function _empty(): LoadResult { return { loadType: 'empty', data: {} } }
+

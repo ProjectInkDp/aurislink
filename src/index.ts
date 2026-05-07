@@ -3,6 +3,8 @@ import { resolve } from 'node:path'
 import { parse } from 'yaml'
 
 import { initLogger, log } from './shared/reporter.js'
+import { SearchResultsCache } from './shared/cache.js'
+import { RetryManager } from './shared/retry.js'
 import { SoundCloudSource } from './providers/soundcloud.js'
 import { DeezerSource } from './providers/deezer.js'
 import { JioSaavnSource } from './providers/jiosaavn.js'
@@ -50,6 +52,10 @@ await trackCache.load()
 const tokenStore = new Vault(config.server.password)
 
 const sources = new Map<string, Source>()
+
+// Initialize cache and retry systems
+const searchCache = new SearchResultsCache(3600) // 1 hour TTL
+log('info', 'AurisLink', 'Search cache initialized (TTL: 1 hour)')
 
 const sc = new SoundCloudSource()
 if (await sc.setup()) sources.set('soundcloud', sc)

@@ -9,6 +9,7 @@ import TrackCache from './engine/TrackCacheSQL.js'
 import type Vault from './engine/Vault.js'
 import { WebSocketManager } from './engine/WebSocketManager.js'
 import { ConnectionMonitor } from './engine/ConnectionMonitor.js'
+import { RateLimiter } from './shared/rateLimit.js'
 
 export async function createServer(
   config: AurisConfig,
@@ -20,9 +21,12 @@ export async function createServer(
   const sm = new SessionManager()
   const wsm = new WebSocketManager(config, sm)
 
-  const dos = config.dosProtection?.enabled !== false ? new GuardManager() : null
+  const dos = config.dosProtection?.enabled ? new GuardManager(config.dosProtection) : null
 
-  const router = createRouter(config, sources, sm, wsm, null, lyricsManager, dos, trackCache, tokenStore)
+  // Fix #2: instantiate and pass RateLimiter so rate limiting from application.yml is enforced
+  const rateLimiter = config.rateLimit?.enabled ? new RateLimiter(config.rateLimit) : undefined
+
+  const router = createRouter(config, sources, sm, wsm, null, lyricsManager, dos, trackCache, tokenStore, rateLimiter)
 
   const handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
     router(req, res).catch(err => {

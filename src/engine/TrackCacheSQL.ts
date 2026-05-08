@@ -54,6 +54,19 @@ export default class TrackCacheSQL {
     deletes: number
   }
 
+  // Fix #9: prepared statements cached after load() so they are compiled once
+  private stmtGet!:              Database.Statement
+  private stmtUpdateAccess!:     Database.Statement
+  private stmtInsert!:           Database.Statement
+  private stmtDelete!:           Database.Statement
+  private stmtCount!:            Database.Statement
+  private stmtIsBlacklisted!:    Database.Statement
+  private stmtBlacklist!:        Database.Statement
+  private stmtUnblacklist!:      Database.Statement
+  private stmtSweepTracks!:      Database.Statement
+  private stmtSweepBlacklist!:   Database.Statement
+  private stmtEvict!:            Database.Statement
+
   constructor(ctx: AurisContext) {
     this.ctx = ctx
     this.dbPath = DEFAULT_DB_PATH
@@ -112,12 +125,33 @@ export default class TrackCacheSQL {
         CREATE INDEX IF NOT EXISTS idx_blacklist_source_id ON blacklist(source, identifier);
       `)
 
+      // Fix #9: prepare all statements once after schema is ready
+      this.stmtGet = this.db.prepare('SELECT value, expires_at FROM tracks WHERE source = ? AND identifier = ?')
+      this.stmtUpdateAccess = this.db.prepare('UPDATE tracks SET accessed_at = ?, access_count = access_count + 1 WHERE source = ? AND identifier = ?')
+      this.stmtInsert = this.db.prepare(`
+        INSERT INTO tracks (source, identifier, value, expires_at, created_at, accessed_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(source, identifier) DO UPDATE SET
+          value = excluded.value,
+          expires_at = excluded.expires_at,
+          accessed_at = excluded.accessed_at,
+          access_count = 1
+      `)
+      this.stmtDelete = this.db.prepare('DELETE FROM tracks WHERE source = ? AND identifier = ?')
+      this.stmtCount = this.db.prepare('SELECT COUNT(*) as count FROM tracks WHERE expires_at IS NULL OR expires_at > ?')
+      this.stmtIsBlacklisted = this.db.prepare('SELECT 1 FROM blacklist WHERE source = ? AND identifier = ? LIMIT 1')
+      this.stmtBlacklist = this.db.prepare('INSERT OR IGNORE INTO blacklist (source, identifier, reason, created_at) VALUES (?, ?, ?, ?)')
+      this.stmtUnblacklist = this.db.prepare('DELETE FROM blacklist WHERE source = ? AND identifier = ?')
+      this.stmtSweepTracks = this.db.prepare('DELETE FROM tracks WHERE expires_at IS NOT NULL AND expires_at < ?')
+      this.stmtSweepBlacklist = this.db.prepare('DELETE FROM blacklist WHERE created_at < ?')
+      this.stmtEvict = this.db.prepare('DELETE FROM tracks WHERE id IN (SELECT id FROM tracks ORDER BY accessed_at ASC LIMIT ?)')
+
+      // Initial cleanup — must run after statements are prepared
+      this._sweep()
+
       // Start cleanup timer
       this.sweepTimer = setInterval(() => this._sweep(), this.sweepMs)
       this.sweepTimer.unref?.()
-
-      // Initial cleanup
-      this._sweep()
 
       const count = this._getTrackCount()
       log('info', 'TrackCacheSQL', `Loaded with ${count} cached tracks from SQLite`)
@@ -144,32 +178,20 @@ export default class TrackCacheSQL {
     }
 
     try {
-      const stmt = this.db.prepare(`
-        SELECT value, expires_at FROM tracks
-        WHERE source = ? AND identifier = ?
-      `)
-      const row = stmt.get(source, identifier) as { value: string; expires_at: number | null } | undefined
+      const row = this.stmtGet.get(source, identifier) as { value: string; expires_at: number | null } | undefined
 
       if (!row) {
         this.stats.misses++
         return null
       }
 
-      // Check expiry
       if (row.expires_at && Date.now() > row.expires_at) {
         this._deleteTrack(source, identifier)
         this.stats.misses++
         return null
       }
 
-      // Update access time for LRU
-      const updateStmt = this.db.prepare(`
-        UPDATE tracks
-        SET accessed_at = ?, access_count = access_count + 1
-        WHERE source = ? AND identifier = ?
-      `)
-      updateStmt.run(Date.now(), source, identifier)
-
+      this.stmtUpdateAccess.run(Date.now(), source, identifier)
       this.stats.hits++
       return JSON.parse(row.value) as T
     } catch (err) {
@@ -196,17 +218,7 @@ export default class TrackCacheSQL {
       const expiresAt = ttlMs > 0 ? now + ttlMs : null
       const valueStr = JSON.stringify(value)
 
-      const stmt = this.db.prepare(`
-        INSERT INTO tracks (source, identifier, value, expires_at, created_at, accessed_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(source, identifier) DO UPDATE SET
-          value = excluded.value,
-          expires_at = excluded.expires_at,
-          accessed_at = excluded.accessed_at,
-          access_count = 1
-      `)
-
-      stmt.run(source, identifier, valueStr, expiresAt, now, now)
+      this.stmtInsert.run(source, identifier, valueStr, expiresAt, now, now)
       this.stats.sets++
       this._evictIfNeeded()
     } catch (err) {
@@ -259,11 +271,7 @@ export default class TrackCacheSQL {
     if (!this.db) return
 
     try {
-      const stmt = this.db.prepare(`
-        INSERT OR IGNORE INTO blacklist (source, identifier, reason, created_at)
-        VALUES (?, ?, ?, ?)
-      `)
-      stmt.run(source, identifier, reason || null, Date.now())
+      this.stmtBlacklist.run(source, identifier, reason || null, Date.now())
       this._deleteTrack(source, identifier)
     } catch (err) {
       log('warn', 'TrackCacheSQL', `Failed to blacklist track: ${err instanceof Error ? err.message : String(err)}`)
@@ -277,8 +285,7 @@ export default class TrackCacheSQL {
     if (!this.db) return false
 
     try {
-      const stmt = this.db.prepare('DELETE FROM blacklist WHERE source = ? AND identifier = ?')
-      const result = stmt.run(source, identifier)
+      const result = this.stmtUnblacklist.run(source, identifier)
       return (result.changes ?? 0) > 0
     } catch (err) {
       log('warn', 'TrackCacheSQL', `Failed to unblacklist track: ${err instanceof Error ? err.message : String(err)}`)
@@ -328,8 +335,7 @@ export default class TrackCacheSQL {
   private _getTrackCount(): number {
     if (!this.db) return 0
     try {
-      const stmt = this.db.prepare('SELECT COUNT(*) as count FROM tracks WHERE expires_at IS NULL OR expires_at > ?')
-      const row = stmt.get(Date.now()) as { count: number } | undefined
+      const row = this.stmtCount.get(Date.now()) as { count: number } | undefined
       return row?.count ?? 0
     } catch {
       return 0
@@ -339,8 +345,7 @@ export default class TrackCacheSQL {
   private _isBlacklisted(source: string, identifier: string): boolean {
     if (!this.db) return false
     try {
-      const stmt = this.db.prepare('SELECT 1 FROM blacklist WHERE source = ? AND identifier = ? LIMIT 1')
-      return stmt.get(source, identifier) !== undefined
+      return this.stmtIsBlacklisted.get(source, identifier) !== undefined
     } catch {
       return false
     }
@@ -349,8 +354,7 @@ export default class TrackCacheSQL {
   private _deleteTrack(source: string, identifier: string): boolean {
     if (!this.db) return false
     try {
-      const stmt = this.db.prepare('DELETE FROM tracks WHERE source = ? AND identifier = ?')
-      const result = stmt.run(source, identifier)
+      const result = this.stmtDelete.run(source, identifier)
       return (result.changes ?? 0) > 0
     } catch {
       return false
@@ -364,13 +368,8 @@ export default class TrackCacheSQL {
     if (!this.db) return
 
     try {
-      // Delete expired entries
-      const deleteStmt = this.db.prepare('DELETE FROM tracks WHERE expires_at IS NOT NULL AND expires_at < ?')
-      const deleted = deleteStmt.run(Date.now()).changes ?? 0
-
-      // Delete old blacklist entries (older than 30 days)
-      const deleteBlacklistStmt = this.db.prepare('DELETE FROM blacklist WHERE created_at < ?')
-      deleteBlacklistStmt.run(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      const deleted = this.stmtSweepTracks.run(Date.now()).changes ?? 0
+      this.stmtSweepBlacklist.run(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
       if (deleted > 0) {
         log('debug', 'TrackCacheSQL', `Swept ${deleted} expired tracks`)
@@ -393,14 +392,7 @@ export default class TrackCacheSQL {
       if (count <= this.maxEntries) return
 
       const toEvict = count - this.maxEntries
-      const stmt = this.db.prepare(`
-        DELETE FROM tracks WHERE id IN (
-          SELECT id FROM tracks
-          ORDER BY accessed_at ASC
-          LIMIT ?
-        )
-      `)
-      const result = stmt.run(toEvict)
+      const result = this.stmtEvict.run(toEvict)
       if ((result.changes ?? 0) > 0) {
         log('debug', 'TrackCacheSQL', `Evicted ${result.changes} oldest tracks (LRU)`)
       }

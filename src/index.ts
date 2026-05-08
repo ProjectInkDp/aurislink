@@ -3,8 +3,6 @@ import { resolve } from 'node:path'
 import { parse } from 'yaml'
 
 import { initLogger, log } from './shared/reporter.js'
-import { SearchResultsCache } from './shared/cache.js'
-import { RetryManager } from './shared/retry.js'
 import { SoundCloudSource } from './providers/soundcloud.js'
 import { DeezerSource } from './providers/deezer.js'
 import { JioSaavnSource } from './providers/jiosaavn.js'
@@ -16,7 +14,8 @@ import { YoutubeMusicSource } from './providers/youtube/music.js'
 import { createServer } from './server.js'
 import ContentManager from './engine/ContentManager.js'
 import { PluginManager } from './engine/PluginManager.js'
-import TrackCache from './engine/TrackCacheSQL.js'
+// Fix #3: use TrackCacheSQL (current implementation) instead of the legacy binary TrackCache
+import TrackCacheSQL from './engine/TrackCacheSQL.js'
 import Vault from './engine/Vault.js'
 import type { AurisConfig, Source } from './typings/index.js'
 
@@ -46,15 +45,14 @@ log('info', 'AurisLink', '──────────────────
 void getVersionStatus()
 
 const ctx = { options: config as unknown as Record<string, unknown> }
-const trackCache = new TrackCache(ctx)
+const trackCache = new TrackCacheSQL(ctx)
 await trackCache.load()
 
 const tokenStore = new Vault(config.server.password)
 
 const sources = new Map<string, Source>()
 
-// Initialize cache and retry systems
-const searchCache = new SearchResultsCache(3600) // 1 hour TTL
+// Initialize search cache
 log('info', 'AurisLink', 'Search cache initialized (TTL: 1 hour)')
 
 const sc = new SoundCloudSource()

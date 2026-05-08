@@ -6,31 +6,9 @@ import type { SessionManager, AudioFilters } from '../engine/SessionManager.js'
 import type { WebSocketManager } from '../engine/WebSocketManager.js'
 import type { Source } from '../typings/index.js'
 import { decodeTrack } from '../shared/media.js'
-import { sendJson, sendError } from './helpers.js'
+import { sendJson, sendError, parseBody } from './helpers.js'
 import { log } from '../shared/reporter.js'
 import { applyFilters, activeFilterNames } from '../filters/FilterChain.js'
-
-// ─── Body reader ──────────────────────────────────────────────────────────────
-
-function readBody(req: http.IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = []
-    req.on('data', c => chunks.push(c))
-    req.on('end',  () => resolve(Buffer.concat(chunks).toString('utf8')))
-    req.on('error', reject)
-  })
-}
-
-async function parseBody<T>(req: http.IncomingMessage, res: http.ServerResponse): Promise<T | null> {
-  try {
-    const raw = await readBody(req)
-    if (!raw.trim()) return {} as T
-    return JSON.parse(raw) as T
-  } catch {
-    sendError(res, 400, 'Bad Request', 'Invalid JSON body')
-    return null
-  }
-}
 
 // ─── PATCH /v4/sessions/:sessionId ───────────────────────────────────────────
 

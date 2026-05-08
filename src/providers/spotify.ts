@@ -1,7 +1,7 @@
 // src/sources/spotify.ts
 import type { Source, LoadResult, Track, TrackInfo, AurisConfig } from '../typings/index.js'
-import { getSpotifyToken, configureSpotifyAuth } from '../shared/spotifyAuth.js'
-import { SpotifyTokenManager } from '../shared/spotify-auth.js'
+// Fix #4: removed SpotifyTokenManager (spotify-auth.ts legacy) — using spotifyAuth.ts exclusively
+import { getSpotifyToken, getMobileToken, configureSpotifyAuth } from '../shared/spotifyAuth.js'
 import { httpGet, httpPostJson } from '../shared/http.js'
 import { log } from '../shared/reporter.js'
 import { encodeTrack } from '../shared/media.js'
@@ -28,30 +28,23 @@ export class AurisSpotifySource implements Source {
   readonly patterns = [
     /https?:\/\/(?:open\.)?spotify\.com\/(?:intl-[a-zA-Z]{2}\/)?(track|album|playlist|artist|episode|show)\/([a-zA-Z0-9]+)/,
   ]
-  
-  private _tokenManager: SpotifyTokenManager
 
   constructor(config: AurisConfig, vault?: any) {
     const sp = config.sources.spotify ?? { enabled: false }
     configureSpotifyAuth(sp)
-    this._tokenManager = new SpotifyTokenManager(sp.sp_dc, vault)
   }
 
   async setup(): Promise<boolean> {
-    await this._tokenManager.getAuth()
+    await getSpotifyToken().catch(() => null)
     return true
   }
 
-  /**
-   * Internal helper to retrieve auth tokens with fallback to legacy system.
-   */
+  // Fix #4: single auth path — mobile token (sp_dc) preferred, falls back to anonymous
   private async _getAuth() {
-    const auth = await this._tokenManager.getAuth()
-    if (auth) return auth
-    
-    // Fallback to legacy auth if modern flow fails
-    const oldAuth = await getSpotifyToken()
-    return { accessToken: oldAuth.accessToken, clientToken: null }
+    const mobile = await getMobileToken()
+    if (mobile) return { accessToken: mobile.accessToken, clientToken: null }
+    const anon = await getSpotifyToken()
+    return { accessToken: anon.accessToken, clientToken: null }
   }
 
   accepts(url: string): boolean {

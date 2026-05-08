@@ -15,7 +15,7 @@ server:
 
 # --- Logging ---
 logging:
-  level: "info" # "debug" | "info" # "debug" | "info" | "warn" | "error"
+  level: "info" # "debug" | "info" | "warn" | "error"
   timestamps: true
   colors: true
   file:
@@ -75,6 +75,11 @@ connection:
     averageMbps: 5 # below this speed → info log (above = debug / skipped)
   probeUrl: "https://speed.cloudflare.com/__down?bytes=1000000" # 1 MB test file
 
+# --- Track cache ---
+trackCache:
+  maxEntries: 4000        # max number of tracks kept in SQLite cache
+  sweepIntervalMs: 60000  # how often to purge expired entries — 1 min
+
 # --- DoS protection ---
 dosProtection:
   enabled: false
@@ -90,7 +95,7 @@ dosProtection:
     maxBlockDurationMs: 600000 # cap on backoff block duration (10 min)
   ignore:
     ips: [] # IPs exempt from DoS checks (e.g. your own bot host)
-    paths: [] # URL paths exempt (e.g. ['/v4/health'])
+    paths: ["/v4/health", "/v4/metrics", "/v4/version"] # URL paths exempt
   trustProxy: false # set true if AurisLink is behind a reverse proxy (uses X-Forwarded-For)
 
 # --- Rate limiting ---
@@ -159,7 +164,7 @@ sources:
     clients: ["WEB", "TVHTML5", "ANDROID"] # preferred clients in order
     allowFallback: true # automatically try next client if current fails
     cookies:
-      enabled: true # set to true to use YouTube cookies from cookies.txt
+      enabled: false # set to true to use YouTube cookies from cookies.txt (requires cookies.txt to exist)
       path: "./cookies.txt" # path to Netscape-format cookies.txt file (from yt-dlp, youtube-dl, etc)
   ytmusic:
     enabled: true # enables YouTube Music search via InnerTube

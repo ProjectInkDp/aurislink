@@ -1,5 +1,7 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { log } from '../shared/reporter.js'
+import { CookieGenerator } from './cookie-generator.js'
 
 export interface Cookie {
   domain: string
@@ -30,6 +32,12 @@ export class CookieManager {
   constructor(filePath?: string, autoRefreshInterval?: number) {
     if (filePath) {
       this._filePath = filePath
+      // Ensure directory exists before trying to load
+      const dir = dirname(filePath)
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true })
+        log('info', 'CookieManager', `Created directory: ${dir}`)
+      }
       this.load()
     }
     if (autoRefreshInterval) {
@@ -44,6 +52,13 @@ export class CookieManager {
   load(): boolean {
     if (!this._filePath) {
       log('warn', 'CookieManager', 'No file path provided')
+      return false
+    }
+
+    // If file doesn't exist, try to generate cookies automatically
+    if (!existsSync(this._filePath)) {
+      log('info', 'CookieManager', `Cookie file not found at ${this._filePath}, attempting auto-generation...`)
+      void this._generateAndSave()
       return false
     }
 
@@ -214,9 +229,33 @@ export class CookieManager {
   }
 
   /**
-   * Get cookie header with only valid cookies
+   * Get valid cookie header
    */
   getValidCookieHeader(): string {
     return Object.values(this.getValidCookies()).join('; ')
+  }
+
+  /**
+   * Auto-generate cookies via CookieGenerator and save to disk
+   */
+  private async _generateAndSave(): Promise<void> {
+    try {
+      const cookies = await CookieGenerator.generate()
+      if (cookies.length === 0) {
+        log('warn', 'CookieManager', 'Auto-generation returned no cookies')
+        return
+      }
+
+      const content = CookieGenerator.toNetscapeFormat(cookies)
+      const dir = dirname(this._filePath!)
+      mkdirSync(dir, { recursive: true })
+      writeFileSync(this._filePath!, content, 'utf-8')
+      log('info', 'CookieManager', `Auto-generated ${cookies.length} cookies saved to ${this._filePath}`)
+
+      // Reload from the newly created file
+      this.load()
+    } catch (err) {
+      log('error', 'CookieManager', `Auto-generation failed: ${err}`)
+    }
   }
 }

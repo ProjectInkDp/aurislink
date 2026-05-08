@@ -99,16 +99,26 @@ export function createRouter(
       if (method === 'GET') return handleGetPlayers(req, res, match[1]!, sm)
     }
 
-    if ((match = path.match(PLAYER_RE))) {
-      const sessionId = match[1]!
-      const guildId = match[2]!
-         if (method === 'GET') return handleLyrics(req, res, sessionId, guildId, sm, config)
-      if (method === 'PATCH') return handleUpdatePlayer(req, res, sessionId, guildId, sm, wsm, sources, url)
-      if (method === 'DELETE') return handleDeletePlayer(req, res, sessionId, guildId, sm, wsm)
+    // Fix #6: LYRICS_RE and LYRICS_SUB_RE must be matched before PLAYER_RE (more specific paths first)
+    if ((match = path.match(LYRICS_RE))) {
+      if (method === 'GET') return handleLyrics(req, res, match[1]!, match[2]!, sm, config)
+    }
+
+    if ((match = path.match(LYRICS_SUB_RE))) {
+      if (method === 'GET') return handleLyricsSubscribe(req, res, match[1]!, match[2]!, sm)
     }
 
     if ((match = path.match(FILTERS_RE))) {
       if (method === 'GET') return handleGetFilters(req, res, match[1]!, match[2]!, sm)
+    }
+
+    // Fix #1: GET /players/:guildId was incorrectly routing to handleLyrics
+    if ((match = path.match(PLAYER_RE))) {
+      const sessionId = match[1]!
+      const guildId = match[2]!
+      if (method === 'GET')    return handleGetPlayer(req, res, sessionId, guildId, sm)
+      if (method === 'PATCH')  return handleUpdatePlayer(req, res, sessionId, guildId, sm, wsm, sources, url)
+      if (method === 'DELETE') return handleDeletePlayer(req, res, sessionId, guildId, sm, wsm)
     }
 
     sendError(res, 404, 'Not Found', `No route for ${method} ${path}`)

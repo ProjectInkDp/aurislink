@@ -89,7 +89,7 @@ async function fetchDeezerChapters(identifier: string): Promise<Chapter[] | null
  * Parses chapters from a SoundCloud track description.
  *
  * Matches lines in the format:  0:00 Intro  or  1:23:45 - Bridge
- * which is the de-facto community standard for YouTube/SoundCloud chapters.
+ * which is the de-facto community standard for SoundCloud chapters.
  */
 async function fetchSoundCloudChapters(
   identifier: string,

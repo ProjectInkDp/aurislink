@@ -337,7 +337,6 @@ export default class LetrasMusLyrics {
 
       const omq = extractOmqLyric(html)
       const letrasId = omq?.ID
-      const youtubeId = omq?.YoutubeID
       const originalLang = omq?.SongLanguage || null
 
       const requestedLang = normalizeLang(language)
@@ -384,39 +383,7 @@ export default class LetrasMusLyrics {
         }
       }
 
-      if (letrasId && youtubeId) {
-        const apiUrl = `https://www.letras.mus.br/api/v2/subtitle/${letrasId}/${youtubeId}/`
-        const apiRes = await httpGet(apiUrl, { method: 'GET' })
-        const apiBody = apiRes?.body
 
-        const parsedApiBody =
-          typeof apiBody === 'string'
-            ? (JSON.parse(apiBody) as LetrasSubtitleApiResponse)
-            : (apiBody as LetrasSubtitleApiResponse | undefined)
-
-        if (
-          apiRes?.status === 200 &&
-          parsedApiBody?.status !== 'not found' &&
-          parsedApiBody?.Original?.Subtitle
-        ) {
-          const lines = parseSubtitle(parsedApiBody.Original.Subtitle)
-          if (lines.length) {
-            return {
-              loadType: 'lyrics',
-              data: {
-                name: omq?.Name || trackInfo.title || 'Unknown',
-                synced: true,
-                language: {
-                  requested: null,
-                  resolved: originalLang,
-                  type: 'original'
-                },
-                lines
-              }
-            }
-          }
-        }
-      }
 
       const plainLines = extractLyricOriginal(html)
       if (!plainLines || plainLines.length === 0) {

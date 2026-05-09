@@ -164,8 +164,8 @@ sources:
     clients: ["WEB", "TVHTML5", "ANDROID"] # preferred clients in order
     allowFallback: true # automatically try next client if current fails
     cookies:
-      enabled: false # set to true to use YouTube cookies from cookies.txt (requires cookies.txt to exist)
-      path: "./cookies.txt" # path to Netscape-format cookies.txt file (from yt-dlp, youtube-dl, etc)
+      enabled: false # set to true to use YouTube cookies from cookies.txt
+      path: "./cookies.txt"
   ytmusic:
     enabled: true # enables YouTube Music search via InnerTube
     clients: ["WEB_REMIX", "ANDROID_MUSIC"] # preferred clients in order

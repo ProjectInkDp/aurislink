@@ -9,7 +9,6 @@ export interface LetrasLyricsTrackInfo {
 export type LetrasMusLyricsResult = LyricsResult
 export interface LetrasOmqLyricPayload {
   ID?:           number | string
-  YoutubeID?:    string
   SongLanguage?: string
   Name?:         string
 }

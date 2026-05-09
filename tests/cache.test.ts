@@ -140,48 +140,48 @@ describe('SearchResultsCache', () => {
   describe('Search Caching', () => {
     it('should cache search results by query and source', () => {
       const results = { data: ['track1', 'track2'] }
-      cache.set('test query', 'youtube', results)
+      cache.set('test query', 'spotify', results)
 
-      expect(cache.get('test query', 'youtube')).toEqual(results)
+      expect(cache.get('test query', 'spotify')).toEqual(results)
     })
 
     it('should differentiate between sources', () => {
-      const resultsYT = { data: ['yt-track'] }
+      const resultsSP = { data: ['sp-track'] }
       const resultsSC = { data: ['sc-track'] }
 
-      cache.set('test', 'youtube', resultsYT)
+      cache.set('test', 'spotify', resultsSP)
       cache.set('test', 'soundcloud', resultsSC)
 
-      expect(cache.get('test', 'youtube')).toEqual(resultsYT)
+      expect(cache.get('test', 'spotify')).toEqual(resultsSP)
       expect(cache.get('test', 'soundcloud')).toEqual(resultsSC)
     })
 
     it('should be case-insensitive for queries', () => {
       const results = { data: ['track1'] }
-      cache.set('Test Query', 'youtube', results)
+      cache.set('Test Query', 'spotify', results)
 
-      expect(cache.get('test query', 'youtube')).toEqual(results)
-      expect(cache.get('TEST QUERY', 'youtube')).toEqual(results)
+      expect(cache.get('test query', 'spotify')).toEqual(results)
+      expect(cache.get('TEST QUERY', 'spotify')).toEqual(results)
     })
 
     it('should check if results are cached', () => {
-      cache.set('test', 'youtube', { data: [] })
-      expect(cache.has('test', 'youtube')).toBe(true)
-      expect(cache.has('other', 'youtube')).toBe(false)
+      cache.set('test', 'spotify', { data: [] })
+      expect(cache.has('test', 'spotify')).toBe(true)
+      expect(cache.has('other', 'spotify')).toBe(false)
     })
 
     it('should report statistics', () => {
-      cache.set('test1', 'youtube', { data: [] })
-      cache.set('test2', 'youtube', { data: [] })
+      cache.set('test1', 'spotify', { data: [] })
+      cache.set('test2', 'spotify', { data: [] })
 
       const stats = cache.getStats()
       expect(stats.totalEntries).toBe(2)
     })
 
     it('should clear cache', () => {
-      cache.set('test', 'youtube', { data: [] })
+      cache.set('test', 'spotify', { data: [] })
       cache.clear()
-      expect(cache.has('test', 'youtube')).toBe(false)
+      expect(cache.has('test', 'spotify')).toBe(false)
     })
   })
 })

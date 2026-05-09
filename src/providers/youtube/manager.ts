@@ -23,13 +23,20 @@ export class YoutubeAudioSourceManager {
     ]
   }
 
-  public async setup(): Promise<boolean> {
+  public async setup(config: AurisConfig): Promise<boolean> {
     log('info', 'YouTube', 'Initializing YouTube Source Manager with official ported structure...')
     
-    // Ensure tokens are ready
-    const poToken = POTokenManager.getPoToken()
-    const visitorData = POTokenManager.getVisitorData()
-    log('debug', 'YouTube', `Using PO-Token: ${poToken ? 'present' : 'missing'}, VisitorData: ${visitorData ? 'present' : 'missing'}`)
+    const ytConfig = config.sources.youtube
+    if (ytConfig?.pot) {
+      POTokenManager.setTokens(ytConfig.pot.token || null, ytConfig.pot.visitorData || null)
+    }
+
+    if (ytConfig?.oauth?.enabled) {
+      this.oauth2Handler.setRefreshToken(ytConfig.oauth.refreshToken || null)
+      if (!ytConfig.oauth.skipInitialization) {
+        await this.oauth2Handler.initialize()
+      }
+    }
 
     // Pre-fetch player script for cipher logic
     await this.cipherManager.getPlayerScript()

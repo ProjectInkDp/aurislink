@@ -160,13 +160,38 @@ sources:
     playlistLoadLimit: 100
     albumLoadLimit: 50
   youtube:
-    enabled: true # enables YouTube search via InnerTube
-    clients: ["WEB", "TVHTML5", "ANDROID"] # preferred clients in order
-    allowFallback: true # automatically try next client if current fails
-    cookies:
-      enabled: false # set to true to use YouTube cookies from cookies.txt
-      path: "./cookies.txt"
+    enabled: true
+    allowSearch: true
+    allowDirectVideoIds: true
+    allowDirectPlaylistIds: true
+    
+    # PO-Token configuration (Required for playback in 2026)
+    pot:
+      token: "" # your PO-Token
+      visitorData: "" # your visitorData
+
+    # OAuth2 configuration
+    oauth:
+      enabled: false
+      refreshToken: "" # your refresh token
+      skipInitialization: false
+
+    # Client rotation and options
+    # Available clients: MUSIC, ANDROID, WEB, TVHTML5SIMPLY, IOS
+    clients: ["MUSIC", "ANDROID", "WEB"]
+    
+    # Detailed options per client
+    clientOptions:
+      WEB:
+        playback: true
+        searching: true
+        videoLoading: true
+        playlistLoading: true
+      ANDROID:
+        playback: true
+        searching: false
+        videoLoading: true
+        playlistLoading: true
+
   ytmusic:
-    enabled: true # enables YouTube Music search via InnerTube
-    clients: ["WEB_REMIX", "ANDROID_MUSIC"] # preferred clients in order
-    allowFallback: true # automatically try next client if current fails
+    enabled: true

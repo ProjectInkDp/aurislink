@@ -24,6 +24,13 @@ export interface ServerConfig {
   http2?: Http2Config
 }
 
+export interface ClientOptions {
+  playback?: boolean
+  searching?: boolean
+  videoLoading?: boolean
+  playlistLoading?: boolean
+}
+
 export interface AurisConfig {
   server: ServerConfig
 
@@ -106,17 +113,23 @@ export interface AurisConfig {
     }
     youtube?: {
       enabled: boolean
-      clients?: string[]
-      allowFallback?: boolean
-      cookies?: {
-        enabled: boolean
-        path: string
+      allowSearch?: boolean
+      allowDirectVideoIds?: boolean
+      allowDirectPlaylistIds?: boolean
+      pot?: {
+        token?: string
+        visitorData?: string
       }
+      oauth?: {
+        enabled: boolean
+        refreshToken?: string
+        skipInitialization?: boolean
+      }
+      clients?: string[]
+      clientOptions?: Record<string, ClientOptions>
     }
     ytmusic?: {
       enabled: boolean
-      clients?: string[]
-      allowFallback?: boolean
     }
   }
 }

@@ -7,13 +7,16 @@ export class YoutubeSource {
   public readonly name: any = 'youtube'
   public readonly searchPrefixes = ['ytsearch']
 
+  private readonly config: AurisConfig
+
   constructor(config: AurisConfig) {
     log('info', 'YouTube', 'Initializing comprehensive ported YouTube Source...')
+    this.config = config
     this.manager = new YoutubeAudioSourceManager(config)
   }
 
   public async setup(): Promise<boolean> {
-    return await this.manager.setup()
+    return await this.manager.setup(this.config)
   }
 
   public async search(query: string): Promise<any> {

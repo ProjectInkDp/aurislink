@@ -15,6 +15,13 @@ export class YoutubeOauth2Handler {
     log('info', 'OAuth2', `Refresh token ${token ? 'updated' : 'cleared'}`)
   }
 
+  public async initialize(): Promise<void> {
+    if (this.refreshToken) {
+      log('info', 'OAuth2', 'Initializing OAuth2 with refresh token...')
+      await this.getAccessToken()
+    }
+  }
+
   public async getAccessToken(): Promise<string | null> {
     if (this.accessToken && this.tokenExpires > Date.now()) {
       return this.accessToken

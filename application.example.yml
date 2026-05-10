@@ -193,5 +193,10 @@ sources:
         videoLoading: true
         playlistLoading: true
 
+    # Remote Chipper configuration (External deciphering)
+    cipher:
+      url: "https://cipher.kikkia.dev/api"
+      token: "" # optional API token
+
   ytmusic:
     enabled: true

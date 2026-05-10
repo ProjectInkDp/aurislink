@@ -1,6 +1,7 @@
 import { log } from '../../../shared/reporter.js'
-import { httpGet } from '../../../shared/http.js'
+import { httpGet, httpPostJson } from '../../../shared/http.js'
 import { SignatureDecipherer, SignatureCipher } from './signature.js'
+import type { AurisConfig } from '../../../typings/index.js'
 
 export interface CachedPlayerScript {
   url: string
@@ -10,6 +11,11 @@ export interface CachedPlayerScript {
 
 export class CipherManager {
   private cachedScript: CachedPlayerScript | null = null
+  private config: AurisConfig['sources']['youtube']
+
+  constructor(config?: AurisConfig['sources']['youtube']) {
+    this.config = config
+  }
 
   public async getPlayerScript(): Promise<SignatureCipher | null> {
     if (this.cachedScript && this.cachedScript.expires > Date.now()) {
@@ -55,6 +61,33 @@ export class CipherManager {
   public async resolveFormatUrl(format: any): Promise<string> {
     const cipher = await this.getPlayerScript()
     if (!cipher) return format.url
+
+    // Use remote chipper if configured
+    if (this.config?.cipher?.url) {
+      try {
+        const scriptUrl = this.cachedScript?.url || 'https://www.youtube.com/s/player/8fb635c2/player_embed_es6.vflset/en_US/base.js'
+        const res = await httpPostJson(`${this.config.cipher.url}/resolve_url`, {
+          stream_url: format.url,
+          player_url: scriptUrl,
+          encrypted_signature: format.signature || null,
+          signature_key: format.signatureKey || 'sig',
+          n_param: format.nParameter || null
+        }, {
+          headers: this.config.cipher.token ? { 'Authorization': this.config.cipher.token } : {}
+        })
+
+        if (res && res.status === 200) {
+          const body = JSON.parse(res.body)
+          if (body.resolved_url) {
+            log('debug', 'YouTubeCipher', 'URL resolved via remote chipper')
+            return body.resolved_url
+          }
+        }
+        log('warn', 'YouTubeCipher', `Remote chipper failed (status ${res?.status}), falling back to local`)
+      } catch (err) {
+        log('warn', 'YouTubeCipher', `Remote chipper error: ${err}, falling back to local`)
+      }
+    }
 
     let url = format.url
     if (format.signature && format.signatureKey) {

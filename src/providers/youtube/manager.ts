@@ -14,7 +14,7 @@ export class YoutubeAudioSourceManager {
   private readonly oauth2Handler: YoutubeOauth2Handler
 
   constructor(config: AurisConfig) {
-    this.cipherManager = new CipherManager()
+    this.cipherManager = new CipherManager(config.sources.youtube)
     this.oauth2Handler = new YoutubeOauth2Handler()
     this.clients = [
       new Music(),

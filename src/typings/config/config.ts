@@ -127,6 +127,10 @@ export interface AurisConfig {
       }
       clients?: string[]
       clientOptions?: Record<string, ClientOptions>
+      cipher?: {
+        url?: string
+        token?: string
+      }
     }
     ytmusic?: {
       enabled: boolean

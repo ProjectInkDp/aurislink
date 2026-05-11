@@ -60,13 +60,17 @@ export abstract class Client {
   protected async loadTrackInfoFromInnertube(source: YoutubeAudioSourceManager, videoId: string): Promise<any> {
     const config = this.getBaseClientConfig()
     const cipher = await source.getCipherManager().getPlayerScript()
+    const visitorData = POTokenManager.getVisitorData()
+    const poToken = POTokenManager.getPoToken()
 
     const payload: any = {
       context: {
         client: {
           ...config,
-          visitorData: POTokenManager.getVisitorData()
-        }
+          visitorData
+        },
+        user: visitorData ? { visitorData } : undefined,
+        request: poToken ? { poToken } : undefined
       },
       videoId,
       playbackContext: {
@@ -80,9 +84,31 @@ export abstract class Client {
       payload.params = this.getPlayerParams()
     }
 
-    const res = await httpPostJson(Client.PLAYER_URL, payload)
+    const headers: Record<string, string> = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+      'Accept': '*/*',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Content-Type': 'application/json',
+      'X-Youtube-Client-Name': this.getClientCode(),
+      'X-Youtube-Client-Version': config.clientVersion,
+      'Origin': 'https://www.youtube.com',
+      'Referer': 'https://www.youtube.com'
+    }
+
+    const res = await httpPostJson(Client.PLAYER_URL, payload, { headers })
     if (!res || !res.body) throw new Error('Failed to load track info from InnerTube')
     return JSON.parse(res.body)
+  }
+
+  protected getClientCode(): number {
+    switch (this.getIdentifier()) {
+      case 'WEB': return 1
+      case 'ANDROID': return 3
+      case 'ANDROID_MUSIC': return 21
+      case 'WEB_REMIX': return 67
+      case 'TVHTML5': return 7
+      default: return 1
+    }
   }
 
   protected async loadSearchResults(source: YoutubeAudioSourceManager, query: string): Promise<any> {

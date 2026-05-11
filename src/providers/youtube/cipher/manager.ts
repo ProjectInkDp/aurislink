@@ -22,40 +22,42 @@ export class CipherManager {
       return this.cachedScript.cipher
     }
 
-    try {
-      const res = await httpGet('https://www.youtube.com/embed/')
-      if (!res || !res.body) return null
+    const playerUrlPatterns = [
+      'https://www.youtube.com/embed/',
+      'https://www.youtube.com/results?search_query=test'
+    ]
 
-      const scriptUrlMatch = res.body.match(/"jsUrl":"([^"]+)"/)
-      if (!scriptUrlMatch) {
-        log('warn', 'YouTubeCipher', 'jsUrl not found in embed page')
-        return null
-      }
-
-      const scriptUrl = scriptUrlMatch[1].startsWith('http') ? scriptUrlMatch[1] : `https://www.youtube.com${scriptUrlMatch[1]}`
-      const scriptRes = await httpGet(scriptUrl)
-      if (!scriptRes || !scriptRes.body) return null
-
+    for (const url of playerUrlPatterns) {
       try {
-        const cipher = SignatureDecipherer.extract(scriptRes.body, scriptUrl)
-        this.cachedScript = {
-          url: scriptUrl,
-          cipher,
-          expires: Date.now() + 24 * 60 * 60 * 1000
+        const res = await httpGet(url)
+        if (!res || !res.body) continue
+
+        let scriptUrlMatch = res.body.match(/"jsUrl":"([^"]+)"/)
+        if (!scriptUrlMatch) scriptUrlMatch = res.body.match(/"assets":\[\s*"[^"]+jsUrl":"([^"]+)"/)
+        if (!scriptUrlMatch) continue
+
+        const scriptUrl = scriptUrlMatch[1].startsWith('http') ? scriptUrlMatch[1] : `https://www.youtube.com${scriptUrlMatch[1]}`
+        const scriptRes = await httpGet(scriptUrl)
+        if (!scriptRes || !scriptRes.body) continue
+
+        try {
+          const cipher = SignatureDecipherer.extract(scriptRes.body, scriptUrl)
+          this.cachedScript = {
+            url: scriptUrl,
+            cipher,
+            expires: Date.now() + 24 * 60 * 60 * 1000
+          }
+          return cipher
+        } catch (extractErr) {
+          log('debug', 'YouTubeCipher', `Extraction failed for ${scriptUrl}: ${extractErr}`)
         }
-        return cipher
-      } catch (extractErr) {
-        log('warn', 'YouTubeCipher', `Extraction failed, using partial cipher: ${extractErr}`)
-        const timestampMatch = scriptRes.body.match(/signatureTimestamp:(\d+)|sts:(\d+)/)
-        return {
-          timestamp: timestampMatch ? (timestampMatch[1] || timestampMatch[2]) : '0',
-          globalVars: '', sigActions: '', sigFunction: '', nFunction: '', script: scriptRes.body
-        }
+      } catch (err) {
+        log('debug', 'YouTubeCipher', `Failed to load player script from ${url}: ${err}`)
       }
-    } catch (err) {
-      log('error', 'YouTubeCipher', `Failed to load player script: ${err}`)
-      return null
     }
+
+    log('error', 'YouTubeCipher', 'All player script sources exhausted')
+    return null
   }
 
   public async resolveFormatUrl(format: any): Promise<string> {

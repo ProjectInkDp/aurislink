@@ -12,56 +12,68 @@ export interface SignatureCipher {
 
 export class SignatureDecipherer {
   private static readonly TIMESTAMP_PATTERN = /signatureTimestamp:(\d+)|sts:(\d+)/
-  private static readonly GLOBAL_VARS_PATTERN = /var\s+[a-zA-Z0-9_$]+\s*=\s*\[(?:\s*[a-zA-Z0-9_$]+\s*(?:,\s*)?)+\];/
-  private static readonly ACTIONS_PATTERN = /var\s+[a-zA-Z0-9_$]+\s*=\s*\{(?:\s*[a-zA-Z0-9_$]+\s*:\s*function\s*\(.*?\)\s*\{[\s\S]*?\}(?:,\s*)?)+\};/
-  private static readonly SIG_FUNCTION_PATTERN = /[a-zA-Z0-9_$]+\.set\("signature",\s*(?<name>[a-zA-Z0-9_$]+)\(/
-  private static readonly N_FUNCTION_PATTERN = /\.get\("n"\)\s*&&\s*(?<name>[a-zA-Z0-9_$]+)\s*=\s*(?<func>[a-zA-Z0-9_$]+)\(\s*\k<name>\s*\)/
+  private static readonly SIG_FUNCTION_PATTERNS = [
+    /[a-zA-Z0-9_$]+\.set\("signature",\s*([a-zA-Z0-9_$]+)\(/,
+    /a\.set\("signature",\s*([a-zA-Z0-9_$]+)\(/,
+    /([a-zA-Z0-9_$]+)\s*=\s*function\s*\(\s*a\s*\)\s*\{[\s\S]{0,2000}?reverse/
+  ]
+  private static readonly N_FUNCTION_PATTERNS = [
+    /\.get\("n"\)\s*&&\s*([a-zA-Z0-9_$]+)\s*=\s*([a-zA-Z0-9_$]+)\s*\(/,
+    /a\.get\("n"\)\s*&&\s*([a-zA-Z0-9_$]+)\s*=\s*([a-zA-Z0-9_$]+)\s*\(/,
+    /transform[^\n]*?=\s*function\s*\(\s*a\s*\)[\s\S]{0,1000}?/
+  ]
 
   public static extract(script: string, sourceUrl: string): SignatureCipher {
     const timestampMatch = script.match(this.TIMESTAMP_PATTERN)
     if (!timestampMatch) throw new Error(`Timestamp not found in script: ${sourceUrl}`)
 
-    const sigFuncNameMatch = script.match(this.SIG_FUNCTION_PATTERN)
-    const nFuncNameMatch = script.match(this.N_FUNCTION_PATTERN)
+    let sigFuncName: string | null = null
+    for (const pattern of this.SIG_FUNCTION_PATTERNS) {
+      const match = script.match(pattern)
+      if (match) {
+        sigFuncName = match[1] || match[2] || match[3]
+        break
+      }
+    }
 
-    if (!sigFuncNameMatch) throw new Error(`Decipher function name not found in script: ${sourceUrl}`)
-    if (!nFuncNameMatch) throw new Error(`N-function name not found in script: ${sourceUrl}`)
+    let nFuncName = 'transform'
+    for (const pattern of this.N_FUNCTION_PATTERNS) {
+      const match = script.match(pattern)
+      if (match) {
+        nFuncName = match[2] || match[1] || 'transform'
+        break
+      }
+    }
 
-    const sigFuncName = sigFuncNameMatch.groups!.name
-    const nFuncName = nFuncNameMatch.groups!.func
+    if (!sigFuncName) {
+      throw new Error(`Decipher function name not found in script: ${sourceUrl}`)
+    }
 
-    const sigFuncPattern = new RegExp(`${sigFuncName}\\s*=\\s*function\\s*\\([a-zA-Z0-9_$]+\\)\\s*\\{[\\s\\S]*?return\\s*[a-zA-Z0-9_$]+\\.join\\(""\\)\\s*\\}`)
-    const nFuncPattern = new RegExp(`${nFuncName}\\s*=\\s*function\\s*\\([a-zA-Z0-9_$]+\\)\\s*\\{[\\s\\S]*?return\\s*[a-zA-Z0-9_$]+\\.join\\(""\\)\\s*\\}`)
+    const sigFuncPattern = new RegExp(`${sigFuncName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*=\\s*function\\s*\\([a-zA-Z0-9_$]+\\)\\s*\\{[\\s\\S]*?return[a-zA-Z0-9_$]+\\.join`)
+    const nFuncPattern = new RegExp(`${nFuncName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*=\\s*function\\s*\\([a-zA-Z0-9_$]+\\)\\s*\\{[\\s\\S]*?return`)
 
     const sigFunctionMatch = script.match(sigFuncPattern)
     const nFunctionMatch = script.match(nFuncPattern)
 
-    if (!sigFunctionMatch) throw new Error(`Decipher function body not found: ${sigFuncName}`)
-    if (!nFunctionMatch) throw new Error(`N-function body not found: ${nFuncName}`)
+    if (!sigFunctionMatch) {
+      throw new Error(`Decipher function body not found: ${sigFuncName}`)
+    }
 
-    // Extract actions used by sigFunction
-    const actionsVarMatch = sigFunctionMatch[0].match(/([a-zA-Z0-9_$]+)\.[a-zA-Z0-9_$]+\(/)
     let sigActions = ''
-    if (actionsVarMatch) {
-      const actionsVar = actionsVarMatch[1]
-      const actionsPattern = new RegExp(`var\\s+${actionsVar}\\s*=\\s*\\{[\\s\\S]*?\\};`)
+    const actionsMatch = sigFunctionMatch[0].match(/([a-zA-Z0-9_$]+)\.(?:reverse|splice|swap)\(/)
+    if (actionsMatch) {
+      const actionsVar = actionsMatch[1]
+      const actionsPattern = new RegExp(`var\\s+${actionsVar}\\s*=\\s*\\{[^}]+\\}`, 's')
       const match = script.match(actionsPattern)
       if (match) sigActions = match[0]
     }
 
-    let nFunction = nFunctionMatch[0]
-    const nParamNameMatch = nFunction.match(/\(([^)]+)\)/)
-    if (nParamNameMatch) {
-      const nParamName = nParamNameMatch[1]
-      nFunction = nFunction.replace(new RegExp(`if\\s*\\(typeof\\s*[^\\s()]+\\s*===?.*?\\)return ${nParamName}\\s*;?`, 'g'), '')
-    }
-
     return {
       timestamp: timestampMatch[1] || timestampMatch[2],
-      globalVars: '', // Often not needed with modern scripts
+      globalVars: '',
       sigActions,
       sigFunction: sigFunctionMatch[0],
-      nFunction: nFunction,
+      nFunction: nFunctionMatch ? nFunctionMatch[0] : `function(a){return a}`,
       script: script
     }
   }

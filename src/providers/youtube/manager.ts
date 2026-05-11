@@ -6,6 +6,7 @@ import { Music } from './clients/music.js'
 import { CipherManager } from './cipher/manager.js'
 import { YoutubeOauth2Handler } from './http/oauth2.js'
 import { POTokenManager } from './http/potoken.js'
+import { httpGet } from '../../shared/http.js'
 import type { AurisConfig } from '../../typings/index.js'
 
 export class YoutubeAudioSourceManager {
@@ -24,13 +25,17 @@ export class YoutubeAudioSourceManager {
   }
 
   public async setup(config: AurisConfig): Promise<boolean> {
-    log('info', 'YouTube', 'Initializing YouTube Source Manager with official ported structure...')
-    
+    log('info', 'YouTube', 'Initializing YouTube Source Manager...')
     const ytConfig = config.sources.youtube
+
+    // Captura automática de visitor data
+    await this.fetchVisitorData()
+
     if (ytConfig?.pot) {
       POTokenManager.setTokens(ytConfig.pot.token || null, ytConfig.pot.visitorData || null)
     }
 
+    // Configurações do Oauth
     if (ytConfig?.oauth?.enabled) {
       this.oauth2Handler.setRefreshToken(ytConfig.oauth.refreshToken || null)
       if (!ytConfig.oauth.skipInitialization) {
@@ -38,10 +43,28 @@ export class YoutubeAudioSourceManager {
       }
     }
 
-    // Pre-fetch player script for cipher logic
+    // Pre-fetch player script
     await this.cipherManager.getPlayerScript()
-    
     return true
+  }
+
+  private async fetchVisitorData(): Promise<void> {
+    try {
+      log('info', 'YouTube', 'Fetching visitorData from YouTube homepage...')
+      const res = await httpGet('https://www.youtube.com/')
+      if (res?.body) {
+        const visitorMatch = res.body.match(/"VISITOR_DATA":"([^"]+)"/)
+        const visitorData = visitorMatch ? visitorMatch[1] : null
+        POTokenManager.setTokens(null, visitorData)
+        if (visitorData) {
+          log('info', 'YouTube', 'visitorData captured successfully')
+        } else {
+          log('warn', 'YouTube', 'Failed to extract visitorData from homepage')
+        }
+      }
+    } catch (err) {
+      log('warn', 'YouTube', `Error fetching visitorData: ${err}`)
+    }
   }
 
   public getClients(): Client[] {

@@ -39,12 +39,18 @@ export class AurisSpotifySource implements Source {
     return true
   }
 
-  // Fix #4: single auth path — mobile token (sp_dc) preferred, falls back to anonymous
-  private async _getAuth() {
+// Fix #4: single auth path — mobile token (sp_dc) preferred, falls back to anonymous
+   private async _getAuth() {
     const mobile = await getMobileToken()
-    if (mobile) return { accessToken: mobile.accessToken, clientToken: null }
+    if (mobile) {
+      // Try to get client-token for mobile
+      const clientToken = await getClientToken(mobile.clientId || 'unknown')
+      return { accessToken: mobile.accessToken, clientToken }
+    }
     const anon = await getSpotifyToken()
-    return { accessToken: anon.accessToken, clientToken: null }
+    // Try to get client-token for anonymous
+    const clientToken = await getClientToken(anon.clientId || 'unknown')
+    return { accessToken: anon.accessToken, clientToken }
   }
 
   accepts(url: string): boolean {
